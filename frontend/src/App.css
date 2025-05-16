@@ -1,0 +1,10 @@
+@import "tailwindcss";
+.masonry-column {
+    background-clip: padding-box;
+    padding-left: 16px;
+}
+  
+.masonry-column > img {
+    margin-bottom: 16px;
+}
+  
