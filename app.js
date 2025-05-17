@@ -68,9 +68,9 @@ app.post('/api/contact', async (req, res) => {
 const frontendPath = path.join(__dirname, 'frontend', 'dist');
 app.use(express.static(frontendPath));
 
-//app.get('*', (req, res) => {
-//  res.sendFile(path.join(frontendPath, 'index.html'));
-//});
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
 
 // ✅ Start the server
 const port = process.env.PORT || 3000;
