@@ -4,12 +4,17 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
+const path = require("path");
+
 const galleryRouter = require('./routes/api/gallery');
 const adminRouter = require('./routes/api/admin');
 
 dotenv.config(); // Load environment variables
 
 const app = express();
+
+// ✅ Connect Database
+connectDB();
 
 // Enable CORS
 app.use(cors({ origin: true, credentials: true }));
@@ -18,15 +23,12 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Serve static images from public/galleries
+// ✅ Serve static images from /galleries (like photos)
 app.use('/galleries', express.static('galleries'));
 
-// API routes
+// ✅ API routes
 app.use('/api/gallery', galleryRouter);
 app.use('/api/admin', adminRouter);
-
-// ✅ Connect Database
-connectDB();
 
 // ✅ Contact form email route
 app.post('/api/contact', async (req, res) => {
@@ -38,22 +40,21 @@ app.post('/api/contact', async (req, res) => {
 
   try {
     const transporter = nodemailer.createTransport({
-        host: 'smtp.mail.me.com',
-        port: 587,
-        secure: false, // STARTTLS
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        },
+      host: 'smtp.mail.me.com',
+      port: 587,
+      secure: false, // STARTTLS
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
     });
-      
 
     const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: process.env.EMAIL_TO || process.env.EMAIL_USER,
-        replyTo: email, // ✅ allows you to reply to user directly
-        subject: `New Contact Form Submission from ${name}`,
-        text: `You received a new message:\n\nName: ${name}\nEmail: ${email}\n\nMessage:\n${message}`
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_TO || process.env.EMAIL_USER,
+      replyTo: email,
+      subject: `New Contact Form Submission from ${name}`,
+      text: `You received a new message:\n\nName: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
     };
 
     await transporter.sendMail(mailOptions);
@@ -65,8 +66,15 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// Basic test route
-app.get("/", (req, res) => res.send("Hello world!"));
+// ✅ Serve frontend (after API and contact routes)
+// Use 'build' if using Create React App — use 'dist' if using Vite
+const frontendPath = path.join(__dirname, 'frontend', 'dist'); // change to 'build' if needed
+app.use(express.static(frontendPath));
 
+app.get('*', (req, res) => {
+  res.sendFile(path.join(frontendPath, 'index.html'));
+});
+
+// ✅ Start server
 const port = process.env.PORT || 8082;
 app.listen(port, () => console.log(`Server running on port ${port}`));
