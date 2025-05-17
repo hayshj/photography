@@ -7,6 +7,7 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import CreateGallery from './pages/CreateGallery';
 import EditGallery from './pages/EditGallery';
+import NotFound from './pages/NotFound';
 import RequireAdmin from './components/RequireAdmin';
 import Footer from './components/Footer';
 import './App.css';
@@ -28,7 +29,7 @@ function App() {
           <Route path="create" element={<CreateGallery />} />
           <Route path="edit/:id" element={<EditGallery />} />
         </Route>
-        
+
         {/* Catch-all route for 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
