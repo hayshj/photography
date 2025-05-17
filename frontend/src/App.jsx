@@ -28,6 +28,9 @@ function App() {
           <Route path="create" element={<CreateGallery />} />
           <Route path="edit/:id" element={<EditGallery />} />
         </Route>
+        
+        {/* Catch-all route for 404 */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
     </>
