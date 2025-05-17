@@ -6,31 +6,29 @@ const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 const path = require("path");
 
-const galleryRouter = require('./routes/api/gallery');
-const adminRouter = require('./routes/api/admin');
-
-dotenv.config(); // Load environment variables
+// Load env variables early
+dotenv.config();
 
 const app = express();
 
 // ✅ Connect Database
 connectDB();
 
-// Enable CORS
+// ✅ Middleware
 app.use(cors({ origin: true, credentials: true }));
-
-// Parse request bodies
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Serve static images from /galleries (like photos)
+// ✅ Static image folder
 app.use('/galleries', express.static('galleries'));
 
-// ✅ API routes
+// ✅ API Routes
+const galleryRouter = require('./routes/api/gallery');
+const adminRouter = require('./routes/api/admin');
 app.use('/api/gallery', galleryRouter);
 app.use('/api/admin', adminRouter);
 
-// ✅ Contact form email route
+// ✅ Contact Form Email Route
 app.post('/api/contact', async (req, res) => {
   const { name, email, message } = req.body;
 
@@ -42,7 +40,7 @@ app.post('/api/contact', async (req, res) => {
     const transporter = nodemailer.createTransport({
       host: 'smtp.mail.me.com',
       port: 587,
-      secure: false, // STARTTLS
+      secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -58,24 +56,23 @@ app.post('/api/contact', async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
-
     res.status(200).json({ message: 'Email sent successfully!' });
+
   } catch (error) {
     console.error('Email error:', error);
     res.status(500).json({ message: 'Failed to send message. Try again later.' });
   }
 });
 
-// ✅ Serve frontend (after API and contact routes)
-// Use 'build' if using Create React App — use 'dist' if using Vite
-const frontendPath = path.join(__dirname, 'frontend', 'dist'); // change to 'build' if needed
+// ✅ Serve frontend last (Vite uses 'dist'; CRA uses 'build')
+const frontendPath = path.join(__dirname, 'frontend', 'dist');
 app.use(express.static(frontendPath));
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
-// ✅ Start server
+// ✅ Start the server
 const port = process.env.PORT || 3000;
 console.log("🚀 Server is starting on port:", port);
-app.listen(port, () => console.log(`Server running on port ${port}`));
+app.listen(port, () => console.log(`✅ Server running on port ${port}`));
