@@ -77,4 +77,5 @@ app.get('*', (req, res) => {
 
 // ✅ Start server
 const port = process.env.PORT || 3000;
+console.log("🚀 Server is starting on port:", port);
 app.listen(port, () => console.log(`Server running on port ${port}`));
