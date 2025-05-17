@@ -11,7 +11,7 @@ function Footer() {
         </p>
         <div className="flex gap-6 text-gray-500">
           <a
-            href="https://instagram.com/YOUR_USERNAME"
+            href="https://instagram.com/hays.hayden"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-blue-600 transition-colors duration-200"
