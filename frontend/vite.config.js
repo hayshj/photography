@@ -9,8 +9,8 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': 'http://localhost:8082',
-      '/galleries': 'http://localhost:8082',
+      '/api': 'http://localhost:3000',
+      '/galleries': 'http://localhost:3000',
     },
   },
 })
