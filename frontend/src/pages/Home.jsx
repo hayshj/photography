@@ -28,11 +28,12 @@ function Home() {
 
       {/* Hero Section */}
       <div
-        className="h-screen pt-[60px] flex flex-col justify-center items-center text-white text-center"
+        className="pt-[60px] flex flex-col justify-center items-center text-white text-center"
         style={{
           backgroundImage: `url(${backgroundImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
+          height: '100svh',
         }}
       >
         <h1 className="text-5xl font-bold mb-3 drop-shadow-lg">
