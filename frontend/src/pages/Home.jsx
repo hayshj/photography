@@ -12,15 +12,16 @@ function Home() {
     const fetchGallery = async () => {
       try {
         const res = await axios.get('/api/gallery/portfolio');
-        setGallery(res.data);
+        const shuffledImages = [...res.data.images].sort(() => Math.random() - 0.5);
+        setGallery({ ...res.data, images: shuffledImages });
       } catch (err) {
         console.error(err);
         setError('Gallery not found.');
       }
     };
-
+  
     fetchGallery();
-  }, []);
+  }, []);  
 
   return (
     <>
