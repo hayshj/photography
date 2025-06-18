@@ -49,7 +49,7 @@ function GalleryPage() {
       </div>
 
 
-        {gallery && <Gallery id="gallery" images={gallery.images} />}
+        {gallery && <Gallery id="gallery" images={gallery.images.slice(0, -1)} />}
       </section>
     </>
   );
