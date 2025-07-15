@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Download, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 import Masonry from 'react-masonry-css';
+import FadeInImage from './FadeInImage'; // Adjust the path based on your folder structure
 
 function Gallery({ id, images, className = "", downloadable = true }) {
   const [loading, setLoading] = useState(true);
@@ -59,7 +60,7 @@ function Gallery({ id, images, className = "", downloadable = true }) {
           >
             {images.map((img, index) => (
               <div key={index} className="mb-4 relative overflow-hidden">
-                <Image
+                <FadeInImage
                   src={img.url}
                   alt={img.filename || `Gallery image ${index + 1}`}
                   onClick={() => {
