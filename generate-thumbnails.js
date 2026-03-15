@@ -57,7 +57,7 @@ async function updateMongoDB() {
   const mongoose = require('mongoose');
   const Gallery = require('./models/Gallery');
 
-  await mongoose.connect(process.env.MONGO_URI);
+  await mongoose.connect(process.env.MONGO_URI, { dbName: 'photo_gallery' });
   console.log('\nConnected to MongoDB');
 
   const galleries = await Gallery.find();

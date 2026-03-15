@@ -10,7 +10,7 @@ mongoose.set("strictQuery", true, "useNewUrlParser", true);
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(db);
+    await mongoose.connect(db, { dbName: 'photo_gallery' });
     console.log("MongoDB is Connected...");
   } catch (err) {
     console.error(err.message);
