@@ -28,17 +28,9 @@ function FadeInImage({ src, alt, onClick, className = "" }) {
       src={src}
       alt={alt}
       onClick={onClick}
-
-      /*
-      
-      transition-opacity duration-700 ease-out
-        ${visible ? 'opacity-100' : 'opacity-0'}
-
-      */
-      
-      className={`s
-        ${className}
-      `}
+      loading="lazy"
+      decoding="async"
+      className={`${className}`}
     />
   );
 }

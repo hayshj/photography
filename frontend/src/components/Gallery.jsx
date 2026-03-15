@@ -61,7 +61,7 @@ function Gallery({ id, images, className = "", downloadable = true }) {
             {images.map((img, index) => (
               <div key={index} className="mb-4 relative overflow-hidden">
                 <FadeInImage
-                  src={img.url}
+                  src={img.thumbnailUrl || img.url}
                   alt={img.filename || `Gallery image ${index + 1}`}
                   onClick={() => {
                     setCurrentIndex(index);

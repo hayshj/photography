@@ -18,13 +18,15 @@ const GallerySchema = new mongoose.Schema({
   },
   images: [
     {
-      filename: String,   // e.g. "sunset1.jpg"
-      url: String         // e.g. "/images/gallery-id/sunset1.jpg"
+      filename: String,
+      url: String,
+      thumbnailUrl: String
     }
   ],
   coverImage: {
-    filename: String,      // e.g. "cover.jpg"
-    url: String            // e.g. "/images/gallery-id/cover.jpg"
+    filename: String,
+    url: String,
+    thumbnailUrl: String
   }
 }, {
   timestamps: true
