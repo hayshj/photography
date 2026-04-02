@@ -20,7 +20,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // ✅ Static image folder
-app.use('/galleries', express.static('galleries'));
+app.use('/galleries', express.static('galleries', {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+}));
 
 // ✅ API Routes
 const galleryRouter = require('./routes/api/gallery');
