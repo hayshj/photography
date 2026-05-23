@@ -1,27 +1,50 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Download, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 import Masonry from 'react-masonry-css';
-import FadeInImage from './FadeInImage'; // Adjust the path based on your folder structure
+import FadeInImage from './FadeInImage';
+
+const PAGE_SIZE = 24;
 
 function Gallery({ id, images, className = "", downloadable = true }) {
   const [loading, setLoading] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = useRef(null);
 
   useEffect(() => {
     if (images && images.length >= 0) setLoading(false);
-  
+
     const checkMobile = () => setIsMobile(window.innerWidth <= 850);
     checkMobile();
-  
+
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, [images]);
-  
 
-  // Keyboard navigation
+  // Reset visible count when images change (e.g. navigating between galleries)
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [images]);
+
+  // Infinite scroll: load more when sentinel enters viewport
+  useEffect(() => {
+    if (!sentinelRef.current || visibleCount >= images.length) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, images.length));
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [visibleCount, images.length]);
+
+  // Keyboard navigation for lightbox
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (!lightboxOpen) return;
@@ -40,6 +63,8 @@ function Gallery({ id, images, className = "", downloadable = true }) {
     trackMouse: false
   });
 
+  const visibleImages = images.slice(0, visibleCount);
+
   return (
     <section id={id} className={`pb-20 px-6 text-black min-h-screen ${className}`}>
       <div className="mx-auto">
@@ -53,38 +78,43 @@ function Gallery({ id, images, className = "", downloadable = true }) {
             <p className="text-gray-500">No images found in this gallery.</p>
           </div>
         ) : (
-          <Masonry
-            breakpointCols={{ default: 3, 1100: 2, 700: 1 }}
-            className="flex w-auto -ml-4"
-            columnClassName="pl-4"
-          >
-            {images.map((img, index) => (
-              <div key={index} className="mb-4 relative overflow-hidden">
-                <FadeInImage
-                  src={img.thumbnailUrl || img.url}
-                  alt={img.filename || `Gallery image ${index + 1}`}
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    setLightboxOpen(true);
-                  }}
-                  className="w-full h-auto shadow-lg cursor-pointer"
-                />
-                {downloadable && (
-                  <>
-                    <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                    <a
-                      href={img.url}
-                      download={img.filename || `image-${index + 1}`}
-                      className="absolute bottom-2 right-2 text-white text-xl rounded-full p-2 opacity-90 hover:opacity-100 transition"
-                      title="Download Image"
-                    >
-                      <Download size={28} className="stroke-white stroke-2" />
-                    </a>
-                  </>
-                )}
-              </div>
-            ))}
-          </Masonry>
+          <>
+            <Masonry
+              breakpointCols={{ default: 3, 1100: 2, 700: 1 }}
+              className="flex w-auto -ml-4"
+              columnClassName="pl-4"
+            >
+              {visibleImages.map((img, index) => (
+                <div key={index} className="mb-4 relative overflow-hidden">
+                  <FadeInImage
+                    src={img.thumbnailUrl || img.url}
+                    alt={img.filename || `Gallery image ${index + 1}`}
+                    onClick={() => {
+                      setCurrentIndex(index);
+                      setLightboxOpen(true);
+                    }}
+                    className="w-full h-auto shadow-lg cursor-pointer"
+                  />
+                  {downloadable && (
+                    <>
+                      <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                      <a
+                        href={img.url}
+                        download={img.filename || `image-${index + 1}`}
+                        className="absolute bottom-2 right-2 text-white text-xl rounded-full p-2 opacity-90 hover:opacity-100 transition"
+                        title="Download Image"
+                      >
+                        <Download size={28} className="stroke-white stroke-2" />
+                      </a>
+                    </>
+                  )}
+                </div>
+              ))}
+            </Masonry>
+            {visibleCount < images.length && (
+              <div ref={sentinelRef} className="h-10" />
+            )}
+          </>
         )}
       </div>
 
@@ -98,7 +128,6 @@ function Gallery({ id, images, className = "", downloadable = true }) {
             <X size={36} />
           </button>
 
-          {/* Image with swipe handlers */}
           <div
             {...swipeHandlers}
             className="relative max-w-full max-h-[90vh] flex items-center justify-center"
@@ -123,7 +152,6 @@ function Gallery({ id, images, className = "", downloadable = true }) {
             )}
           </div>
 
-          {/* Arrows only on desktop */}
           {!isMobile && (
             <>
               <button

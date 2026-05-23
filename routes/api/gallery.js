@@ -59,15 +59,16 @@ router.post('/', verifyAdmin, async (req, res) => {
   }
 });
 
-// Helper: generate a thumbnail for a given file path, return the thumbnail disk path
+// Helper: generate a WebP thumbnail, returns the thumbnail filename (with .webp extension)
 async function generateThumbnail(filePath, thumbDir, filename) {
   if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
-  const thumbPath = path.join(thumbDir, filename);
+  const thumbFilename = filename.replace(/\.[^.]+$/, '.webp');
+  const thumbPath = path.join(thumbDir, thumbFilename);
   await sharp(filePath)
-    .resize(900, null, { withoutEnlargement: true })
-    .jpeg({ quality: 80 })
+    .resize(500, null, { withoutEnlargement: true })
+    .webp({ quality: 75 })
     .toFile(thumbPath);
-  return thumbPath;
+  return thumbFilename;
 }
 
 // ✅ POST upload images & cover image
@@ -85,11 +86,11 @@ router.post('/:id/upload', verifyAdmin, upload.fields([
     const coverFiles = req.files['coverImage'] || [];
 
     const newImageEntries = await Promise.all(uploadedImages.map(async (file) => {
-      await generateThumbnail(file.path, thumbDir, file.filename);
+      const thumbFilename = await generateThumbnail(file.path, thumbDir, file.filename);
       return {
         filename: file.filename,
         url: `${galleryPath}/${file.filename}`,
-        thumbnailUrl: `${galleryPath}/thumbnails/${file.filename}`
+        thumbnailUrl: `${galleryPath}/thumbnails/${thumbFilename}`
       };
     }));
 
@@ -97,11 +98,11 @@ router.post('/:id/upload', verifyAdmin, upload.fields([
 
     if (coverFiles.length > 0) {
       const coverFile = coverFiles[0];
-      await generateThumbnail(coverFile.path, thumbDir, coverFile.filename);
+      const coverThumbFilename = await generateThumbnail(coverFile.path, thumbDir, coverFile.filename);
       const coverEntry = {
         filename: coverFile.filename,
         url: `${galleryPath}/${coverFile.filename}`,
-        thumbnailUrl: `${galleryPath}/thumbnails/${coverFile.filename}`
+        thumbnailUrl: `${galleryPath}/thumbnails/${coverThumbFilename}`
       };
 
       if (!gallery.images.some(img => img.filename === coverEntry.filename)) {

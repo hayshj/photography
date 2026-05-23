@@ -17,13 +17,14 @@ const diskOnly = process.argv.includes('--disk');
 
 async function generateThumbnail(srcPath, thumbDir, filename) {
   if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
-  const thumbPath = path.join(thumbDir, filename);
-  if (fs.existsSync(thumbPath)) return false; // already done
+  const thumbFilename = filename.replace(/\.[^.]+$/, '.webp');
+  const thumbPath = path.join(thumbDir, thumbFilename);
+  if (fs.existsSync(thumbPath)) return null; // already done
   await sharp(srcPath)
-    .resize(900, null, { withoutEnlargement: true })
-    .jpeg({ quality: 80 })
+    .resize(500, null, { withoutEnlargement: true })
+    .webp({ quality: 75 })
     .toFile(thumbPath);
-  return true;
+  return thumbFilename;
 }
 
 async function generateDiskThumbnails() {
@@ -43,8 +44,8 @@ async function generateDiskThumbnails() {
     for (const filename of files) {
       const srcPath = path.join(galleryDir, filename);
       try {
-        const created = await generateThumbnail(srcPath, thumbDir, filename);
-        if (created) console.log(`  Thumbnailed: ${filename}`);
+        const thumbFilename = await generateThumbnail(srcPath, thumbDir, filename);
+        if (thumbFilename) console.log(`  Thumbnailed: ${filename} → ${thumbFilename}`);
         else console.log(`  Skipped (exists): ${filename}`);
       } catch (err) {
         console.error(`  Error on ${filename}:`, err.message);
@@ -68,15 +69,21 @@ async function updateMongoDB() {
     let modified = false;
 
     for (const img of gallery.images) {
-      if (!img.thumbnailUrl) {
-        img.thumbnailUrl = `${galleryPath}/thumbnails/${img.filename}`;
+      const webpFilename = img.filename.replace(/\.[^.]+$/, '.webp');
+      const expectedThumbUrl = `${galleryPath}/thumbnails/${webpFilename}`;
+      if (img.thumbnailUrl !== expectedThumbUrl) {
+        img.thumbnailUrl = expectedThumbUrl;
         modified = true;
       }
     }
 
-    if (gallery.coverImage && !gallery.coverImage.thumbnailUrl) {
-      gallery.coverImage.thumbnailUrl = `${galleryPath}/thumbnails/${gallery.coverImage.filename}`;
-      modified = true;
+    if (gallery.coverImage) {
+      const webpFilename = gallery.coverImage.filename.replace(/\.[^.]+$/, '.webp');
+      const expectedThumbUrl = `${galleryPath}/thumbnails/${webpFilename}`;
+      if (gallery.coverImage.thumbnailUrl !== expectedThumbUrl) {
+        gallery.coverImage.thumbnailUrl = expectedThumbUrl;
+        modified = true;
+      }
     }
 
     if (modified) {
