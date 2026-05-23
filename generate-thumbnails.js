@@ -14,12 +14,13 @@ require('dotenv').config();
 
 const galleriesDir = path.join(__dirname, 'galleries');
 const diskOnly = process.argv.includes('--disk');
+const force = process.argv.includes('--force');
 
 async function generateThumbnail(srcPath, thumbDir, filename) {
   if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
   const thumbFilename = filename.replace(/\.[^.]+$/, '.webp');
   const thumbPath = path.join(thumbDir, thumbFilename);
-  if (fs.existsSync(thumbPath)) return null; // already done
+  if (fs.existsSync(thumbPath) && !force) return null; // already done
   await sharp(srcPath)
     .resize(900, null, { withoutEnlargement: true })
     .webp({ quality: 85 })
