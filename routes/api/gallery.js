@@ -28,7 +28,7 @@ const upload = multer({ storage });
 // ✅ GET all galleries
 router.get('/', async (req, res) => {
   try {
-    const galleries = await Gallery.find().sort({ date: -1 }); // Sort by date descending
+    const galleries = await Gallery.find().sort({ date: -1 });
     res.json(galleries);
   } catch (err) {
     console.error(err);
@@ -65,8 +65,8 @@ async function generateThumbnail(filePath, thumbDir, filename) {
   const thumbFilename = filename.replace(/\.[^.]+$/, '.webp');
   const thumbPath = path.join(thumbDir, thumbFilename);
   await sharp(filePath)
-    .resize(500, null, { withoutEnlargement: true })
-    .webp({ quality: 75 })
+    .resize(900, null, { withoutEnlargement: true })
+    .webp({ quality: 85 })
     .toFile(thumbPath);
   return thumbFilename;
 }
@@ -201,7 +201,7 @@ router.put('/:id', verifyAdmin, async (req, res) => {
 // ✅ GET all galleries except 'portfolio'
 router.get('/exclude/portfolio', async (req, res) => {
   try {
-    const galleries = await Gallery.find({ galleryId: { $ne: 'portfolio' } }).sort({ date: -1 }); // Sort by date descending
+    const galleries = await Gallery.find({ galleryId: { $ne: 'portfolio' } }).sort({ date: -1 });
     res.json(galleries);
   } catch (err) {
     console.error(err);

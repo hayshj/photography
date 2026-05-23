@@ -21,8 +21,8 @@ async function generateThumbnail(srcPath, thumbDir, filename) {
   const thumbPath = path.join(thumbDir, thumbFilename);
   if (fs.existsSync(thumbPath)) return null; // already done
   await sharp(srcPath)
-    .resize(500, null, { withoutEnlargement: true })
-    .webp({ quality: 75 })
+    .resize(900, null, { withoutEnlargement: true })
+    .webp({ quality: 85 })
     .toFile(thumbPath);
   return thumbFilename;
 }
