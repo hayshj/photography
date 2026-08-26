@@ -9,6 +9,7 @@ function FadeInImage({
   height,
   alt,
   onClick,
+  onLoad,
   onSettled,
   className = "",
   eager = false
@@ -33,8 +34,9 @@ function FadeInImage({
       loading={eager ? 'eager' : 'lazy'}
       fetchPriority={eager ? 'high' : 'low'}
       decoding="async"
-      onLoad={() => {
+      onLoad={(event) => {
         setLoaded(true);
+        onLoad?.(event);
         onSettled?.();
       }}
       onError={() => {

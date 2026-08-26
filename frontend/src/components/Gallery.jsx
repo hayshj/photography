@@ -11,8 +11,10 @@ function Gallery({ id, images, className = "", downloadable = true }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [columnCount, setColumnCount] = useState(3);
   const [visibleCount, setVisibleCount] = useState(PRIORITY_IMAGE_COUNT);
   const [settledImages, setSettledImages] = useState(() => new Set());
+  const [measuredAspectRatios, setMeasuredAspectRatios] = useState(() => new Map());
   const loadMoreRef = useRef(null);
   const previousImagesRef = useRef(images);
 
@@ -22,6 +24,24 @@ function Gallery({ id, images, className = "", downloadable = true }) {
   );
   const visibleBatchSettled = visibleImages.length > 0 &&
     visibleImages.every((_, index) => settledImages.has(index));
+  const masonryColumns = useMemo(() => {
+    const effectiveColumnCount = Math.min(columnCount, Math.max(visibleImages.length, 1));
+    const columns = Array.from({ length: effectiveColumnCount }, () => []);
+    const columnHeights = Array(effectiveColumnCount).fill(0);
+
+    visibleImages.forEach((img, index) => {
+      const storedRatio = Number(img.aspectRatio) ||
+        (img.width && img.height ? img.width / img.height : 0);
+      const aspectRatio = measuredAspectRatios.get(index) || storedRatio || 1;
+      const shortestColumn = columnHeights.indexOf(Math.min(...columnHeights));
+      const targetColumn = index < effectiveColumnCount ? index : shortestColumn;
+
+      columns[targetColumn].push({ img, index });
+      columnHeights[targetColumn] += (1 / aspectRatio) + 0.04;
+    });
+
+    return columns;
+  }, [columnCount, measuredAspectRatios, visibleImages]);
 
   const markImageSettled = useCallback((index) => {
     setSettledImages(previous => {
@@ -32,11 +52,25 @@ function Gallery({ id, images, className = "", downloadable = true }) {
     });
   }, []);
 
+  const recordAspectRatio = useCallback((index, imageElement) => {
+    const { naturalWidth, naturalHeight } = imageElement;
+    if (!naturalWidth || !naturalHeight) return;
+    const aspectRatio = naturalWidth / naturalHeight;
+
+    setMeasuredAspectRatios(previous => {
+      if (Math.abs((previous.get(index) || 0) - aspectRatio) < 0.001) return previous;
+      const next = new Map(previous);
+      next.set(index, aspectRatio);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     if (previousImagesRef.current === images) return;
     previousImagesRef.current = images;
     setVisibleCount(PRIORITY_IMAGE_COUNT);
     setSettledImages(new Set());
+    setMeasuredAspectRatios(new Map());
   }, [images]);
 
   useEffect(() => {
@@ -60,11 +94,15 @@ function Gallery({ id, images, className = "", downloadable = true }) {
   }, [images.length, visibleBatchSettled, visibleCount]);
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth <= 850);
-    checkMobile();
+    const checkViewport = () => {
+      const viewportWidth = window.innerWidth;
+      setIsMobile(viewportWidth <= 850);
+      setColumnCount(viewportWidth <= 700 ? 1 : viewportWidth <= 1100 ? 2 : 3);
+    };
+    checkViewport();
 
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
   }, []);
 
   useEffect(() => {
@@ -112,44 +150,53 @@ function Gallery({ id, images, className = "", downloadable = true }) {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 min-[701px]:grid-cols-2 min-[1101px]:grid-cols-3 gap-4 items-start">
-              {visibleImages.map((img, index) => (
-                <div key={img.filename || img.url || index} className="relative overflow-hidden bg-gray-100 self-start">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCurrentIndex(index);
-                      setLightboxOpen(true);
-                    }}
-                    className="block w-full"
-                    aria-label={`Open image ${index + 1} of ${images.length}`}
-                  >
-                    <FadeInImage
-                      src={optimizedImageUrl(img, 640)}
-                      srcSet={optimizedImageSrcSet(img, [320, 640])}
-                      sizes="(max-width: 700px) calc(100vw - 3rem), (max-width: 1100px) calc(50vw - 2.5rem), calc(33vw - 2rem)"
-                      fallbackSrc={img.url}
-                      width={img.width}
-                      height={img.height}
-                      alt={img.filename || `Gallery image ${index + 1}`}
-                      eager={index < PRIORITY_IMAGE_COUNT}
-                      onSettled={() => markImageSettled(index)}
-                      className="w-full h-auto shadow-lg cursor-pointer"
-                    />
-                  </button>
-                  {downloadable && (
-                    <>
-                      <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                      <a
-                        href={img.url}
-                        download={img.filename || `image-${index + 1}`}
-                        className="absolute bottom-2 right-2 text-white text-xl rounded-full p-2 opacity-90 hover:opacity-100 transition"
-                        title="Download Image"
+            <div className="flex w-auto -ml-4 items-start">
+              {masonryColumns.map((column, columnIndex) => (
+                <div
+                  key={columnIndex}
+                  className="pl-4"
+                  style={{ width: `${100 / masonryColumns.length}%` }}
+                >
+                  {column.map(({ img, index }) => (
+                    <div key={img.filename || img.url || index} className="mb-4 relative overflow-hidden bg-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentIndex(index);
+                          setLightboxOpen(true);
+                        }}
+                        className="block w-full"
+                        aria-label={`Open image ${index + 1} of ${images.length}`}
                       >
-                        <Download size={28} className="stroke-white stroke-2" />
-                      </a>
-                    </>
-                  )}
+                        <FadeInImage
+                          src={optimizedImageUrl(img, 640)}
+                          srcSet={optimizedImageSrcSet(img, [320, 640])}
+                          sizes="(max-width: 700px) calc(100vw - 3rem), (max-width: 1100px) calc(50vw - 2.5rem), calc(33vw - 2rem)"
+                          fallbackSrc={img.url}
+                          width={img.width}
+                          height={img.height}
+                          alt={img.filename || `Gallery image ${index + 1}`}
+                          eager={index < PRIORITY_IMAGE_COUNT}
+                          onLoad={(event) => recordAspectRatio(index, event.currentTarget)}
+                          onSettled={() => markImageSettled(index)}
+                          className="w-full h-auto shadow-lg cursor-pointer"
+                        />
+                      </button>
+                      {downloadable && (
+                        <>
+                          <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
+                          <a
+                            href={img.url}
+                            download={img.filename || `image-${index + 1}`}
+                            className="absolute bottom-2 right-2 text-white text-xl rounded-full p-2 opacity-90 hover:opacity-100 transition"
+                            title="Download Image"
+                          >
+                            <Download size={28} className="stroke-white stroke-2" />
+                          </a>
+                        </>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
