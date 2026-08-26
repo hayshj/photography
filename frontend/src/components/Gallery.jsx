@@ -73,6 +73,7 @@ function Gallery({ id, images, className = "", downloadable = true }) {
                     src={optimizedImageUrl(img, 640)}
                     srcSet={optimizedImageSrcSet(img, [320, 640])}
                     sizes="(max-width: 700px) calc(100vw - 3rem), (max-width: 1100px) calc(50vw - 2.5rem), calc(33vw - 2rem)"
+                    fallbackSrc={img.url}
                     alt={img.filename || `Gallery image ${index + 1}`}
                     eager={index < 6}
                     onClick={() => {
@@ -115,12 +116,13 @@ function Gallery({ id, images, className = "", downloadable = true }) {
             {...swipeHandlers}
             className="relative max-w-full max-h-[90vh] flex items-center justify-center"
           >
-            <img
+            <FadeInImage
               src={optimizedImageUrl(images[currentIndex], 900)}
               srcSet={optimizedImageSrcSet(images[currentIndex], [640, 900, 1400])}
               sizes="(max-width: 700px) 300px, 90vw"
+              fallbackSrc={images[currentIndex].url}
               alt={`Image ${currentIndex + 1}`}
-              decoding="async"
+              eager
               className="max-w-full max-h-[80vh] object-contain shadow-lg"
             />
             {downloadable && (

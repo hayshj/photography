@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import FadeInImage from '../components/FadeInImage';
 import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
 
 // Skeleton Loader Component
@@ -64,13 +65,12 @@ function Galleries() {
             {galleries.map((gallery) => (
               <Link to={`/gallery/${gallery.galleryId}`} key={gallery.galleryId} onClick={scrollToTop}>
                 <div className="border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition">
-                  <img
+                  <FadeInImage
                     src={gallery.coverImage ? optimizedImageUrl(gallery.coverImage, 640) : '/default-cover.jpg'}
                     srcSet={gallery.coverImage ? optimizedImageSrcSet(gallery.coverImage, [320, 640]) : undefined}
                     sizes="(max-width: 640px) calc(100vw - 3rem), (max-width: 768px) calc(50vw - 2.5rem), 352px"
+                    fallbackSrc={gallery.coverImage?.url}
                     alt={gallery.title}
-                    loading="lazy"
-                    decoding="async"
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">

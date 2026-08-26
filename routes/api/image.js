@@ -33,18 +33,25 @@ function findSource(galleryDir, filename, width) {
 }
 
 async function createOptimizedImage(sourcePath, cachePath, width) {
-  await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
   const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.webp`;
+  const buffer = await sharp(sourcePath)
+    .rotate()
+    .resize({ width, withoutEnlargement: true })
+    .webp({ quality: width >= 1400 ? 72 : width >= 900 ? 76 : 72, effort: 4 })
+    .toBuffer();
 
   try {
-    await sharp(sourcePath)
-      .rotate()
-      .resize({ width, withoutEnlargement: true })
-      .webp({ quality: width >= 1400 ? 72 : width >= 900 ? 76 : 72, effort: 4 })
-      .toFile(temporaryPath);
+    await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
+    await fs.promises.writeFile(temporaryPath, buffer);
     await fs.promises.rename(temporaryPath, cachePath);
+    return null;
+  } catch (cacheError) {
+    // Some production hosts have an ephemeral or read-only filesystem. The
+    // optimized response can still be served and cached by the browser/CDN.
+    console.warn('Image cache unavailable; serving from memory:', cacheError.message);
+    return buffer;
   } finally {
-    await fs.promises.rm(temporaryPath, { force: true });
+    await fs.promises.rm(temporaryPath, { force: true }).catch(() => {});
   }
 }
 
@@ -64,20 +71,28 @@ router.get('/:galleryId/:filename', async (req, res) => {
   const cachePath = path.join(galleryDir, '.optimized', String(width), cacheFilename);
 
   try {
+    let optimizedBuffer = null;
     if (!fs.existsSync(cachePath)) {
       if (!pendingTransforms.has(cachePath)) {
         const transform = createOptimizedImage(sourcePath, cachePath, width)
           .finally(() => pendingTransforms.delete(cachePath));
         pendingTransforms.set(cachePath, transform);
       }
-      await pendingTransforms.get(cachePath);
+      optimizedBuffer = await pendingTransforms.get(cachePath);
+    }
+
+    const headers = {
+      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Content-Type': 'image/webp'
+    };
+
+    if (optimizedBuffer) {
+      res.set(headers);
+      return res.send(optimizedBuffer);
     }
 
     return res.sendFile(cachePath, {
-      headers: {
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Content-Type': 'image/webp'
-      }
+      headers
     });
   } catch (error) {
     console.error('Image optimization error:', error);

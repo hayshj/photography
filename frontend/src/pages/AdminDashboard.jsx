@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Pencil, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import FadeInImage from '../components/FadeInImage';
 import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
 
 function AdminDashboard() {
@@ -82,13 +83,12 @@ function AdminDashboard() {
             key={gallery.galleryId}
             className="relative border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition rounded"
           >
-            <img
+            <FadeInImage
               src={gallery.coverImage ? optimizedImageUrl(gallery.coverImage, 640) : '/default-cover.jpg'}
               srcSet={gallery.coverImage ? optimizedImageSrcSet(gallery.coverImage, [320, 640]) : undefined}
               sizes="(max-width: 768px) calc(100vw - 3rem), 320px"
+              fallbackSrc={gallery.coverImage?.url}
               alt={gallery.title}
-              loading="lazy"
-              decoding="async"
               className="w-full h-48 object-cover"
             />
             <div className="p-4">
