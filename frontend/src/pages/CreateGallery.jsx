@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import LocalImagePreview from '../components/LocalImagePreview';
+import { uploadImagesInBatches } from '../uploadImages';
 
 function CreateGallery() {
   const navigate = useNavigate();
@@ -12,6 +14,7 @@ function CreateGallery() {
   const [images, setImages] = useState([]);
   const [coverImage, setCoverImage] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -59,18 +62,12 @@ function CreateGallery() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const formData = new FormData();
-      images.forEach((img) => formData.append('images', img));
-      if (coverImage) {
-        const file = images.find((img) => img.name === coverImage);
-        if (file) formData.append('coverImage', file);
-      }
-
-      await axios.post(`/api/gallery/${galleryId}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
+      await uploadImagesInBatches({
+        galleryId,
+        images,
+        coverImage,
+        token,
+        onProgress: setUploadProgress
       });
 
       // Scroll to the top before redirect
@@ -163,17 +160,17 @@ function CreateGallery() {
               <div className="mt-4 h-72 overflow-y-auto border rounded p-2">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {images.map((file, index) => {
-                    const preview = URL.createObjectURL(file);
+                    const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
                     return (
                       <div
-                        key={index}
+                        key={fileKey}
                         className={`relative border rounded overflow-hidden group ${
                           file.name === coverImage ? 'ring-4 ring-blue-500' : ''
                         }`}
                         onClick={() => !submitting && handleCoverSelect(file)}
                       >
-                        <img
-                          src={preview}
+                        <LocalImagePreview
+                          file={file}
                           alt={file.name}
                           className="object-cover w-full h-32"
                         />
@@ -221,7 +218,13 @@ function CreateGallery() {
                 submitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              {submitting ? 'Creating...' : 'Create Gallery'}
+              {submitting
+                ? uploadProgress > 0
+                  ? uploadProgress === 100
+                    ? 'Processing images...'
+                    : `Uploading ${uploadProgress}%`
+                  : 'Creating...'
+                : 'Create Gallery'}
             </button>
           </div>
         </form>

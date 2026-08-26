@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
 import Navbar from '../components/Navbar';
 import Gallery from '../components/Gallery';
 import { ArrowLeft } from 'lucide-react';
@@ -12,17 +11,23 @@ function GalleryPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchGallery = async () => {
       try {
-        const res = await axios.get(`/api/gallery/${id}`);
-        setGallery(res.data);
+        const response = await fetch(`/api/gallery/${encodeURIComponent(id)}`, {
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error('Gallery not found');
+        setGallery(await response.json());
       } catch (err) {
+        if (err.name === 'AbortError') return;
         console.error(err);
         setError('Gallery not found.');
       }
     };
 
     fetchGallery();
+    return () => controller.abort();
   }, [id]);
 
   return (

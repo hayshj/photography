@@ -5,6 +5,8 @@
   "scripts": {
     "app": "nodemon app.js",
     "start": "node app.js",
+    "migrate:images": "node generate-thumbnails.js",
+    "migrate:images:disk": "node generate-thumbnails.js --disk",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -14,6 +16,7 @@
   "dependencies": {
     "bcrypt": "^5.1.1",
     "body-parser": "^2.2.0",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",

@@ -3,8 +3,15 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const crypto = require('crypto');
 const verifyAdmin = require('../../middleware/verifyAdmin');
 const Gallery = require('../../models/Gallery');
+const {
+  IMAGE_WIDTHS,
+  generateResponsiveVariants,
+  getVariantPath,
+  readImageDimensions
+} = require('../../services/imageProcessing');
 
 const router = express.Router();
 const uploadDir = path.join(__dirname, '..', '..', 'galleries');
@@ -20,10 +27,30 @@ const storage = multer.diskStorage({
     cb(null, galleryPath);
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
+    cb(null, `${Date.now()}-${crypto.randomUUID()}-${path.basename(file.originalname)}`);
   },
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 50 * 1024 * 1024, files: 501 },
+  fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/'))
+});
+
+async function mapWithConcurrency(items, limit, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex++;
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  }
+
+  const workerCount = Math.min(limit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
 
 // ✅ GET all galleries
 router.get('/', async (req, res) => {
@@ -77,6 +104,22 @@ async function generateThumbnail(filePath, thumbDir, filename) {
   return thumbFilename;
 }
 
+async function processUploadedImage(file, galleryDir, thumbDir, galleryPath) {
+  const dimensions = await readImageDimensions(file.path);
+  const thumbFilename = await generateThumbnail(file.path, thumbDir, file.filename);
+  await generateResponsiveVariants(file.path, galleryDir, file.filename);
+
+  return {
+    originalName: file.originalname,
+    entry: {
+      filename: file.filename,
+      url: `${galleryPath}/${file.filename}`,
+      thumbnailUrl: `${galleryPath}/thumbnails/${thumbFilename}`,
+      ...dimensions
+    }
+  };
+}
+
 // ✅ POST upload images & cover image
 router.post('/:id/upload', verifyAdmin, upload.fields([
   { name: 'images' },
@@ -87,29 +130,39 @@ router.post('/:id/upload', verifyAdmin, upload.fields([
     if (!gallery) return res.status(404).json({ error: 'Gallery not found' });
 
     const galleryPath = `/galleries/${req.params.id}`;
+    const galleryDir = path.join(uploadDir, req.params.id);
     const thumbDir = path.join(uploadDir, req.params.id, 'thumbnails');
     const uploadedImages = req.files['images'] || [];
     const coverFiles = req.files['coverImage'] || [];
 
-    const newImageEntries = await Promise.all(uploadedImages.map(async (file) => {
-      const thumbFilename = await generateThumbnail(file.path, thumbDir, file.filename);
-      return {
-        filename: file.filename,
-        url: `${galleryPath}/${file.filename}`,
-        thumbnailUrl: `${galleryPath}/thumbnails/${thumbFilename}`
-      };
-    }));
+    const processedImages = await mapWithConcurrency(
+      uploadedImages,
+      2,
+      file => processUploadedImage(file, galleryDir, thumbDir, galleryPath)
+    );
+    const newImageEntries = processedImages.map(({ entry }) => entry);
 
     gallery.images.push(...newImageEntries);
 
-    if (coverFiles.length > 0) {
+    let coverSetFromImages = false;
+    if (req.body.coverOriginalName) {
+      const coverMatch = processedImages.find(
+        ({ originalName }) => originalName === req.body.coverOriginalName
+      );
+      if (coverMatch) {
+        gallery.coverImage = coverMatch.entry;
+        coverSetFromImages = true;
+      }
+    }
+
+    if (!coverSetFromImages && coverFiles.length > 0) {
       const coverFile = coverFiles[0];
-      const coverThumbFilename = await generateThumbnail(coverFile.path, thumbDir, coverFile.filename);
-      const coverEntry = {
-        filename: coverFile.filename,
-        url: `${galleryPath}/${coverFile.filename}`,
-        thumbnailUrl: `${galleryPath}/thumbnails/${coverThumbFilename}`
-      };
+      const { entry: coverEntry } = await processUploadedImage(
+        coverFile,
+        galleryDir,
+        thumbDir,
+        galleryPath
+      );
 
       if (!gallery.images.some(img => img.filename === coverEntry.filename)) {
         gallery.images.push(coverEntry);
@@ -182,6 +235,14 @@ router.put('/:id', verifyAdmin, async (req, res) => {
       if (toDelete) {
         const filePath = path.join(folderPath, img.filename);
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        const parsed = path.parse(img.filename);
+        [
+          path.join(folderPath, 'thumbnails', img.filename),
+          path.join(folderPath, 'thumbnails', `${parsed.name}.webp`),
+          ...IMAGE_WIDTHS.map(width => getVariantPath(folderPath, img.filename, width))
+        ].forEach(assetPath => {
+          if (fs.existsSync(assetPath)) fs.unlinkSync(assetPath);
+        });
       }
       return !toDelete;
     });

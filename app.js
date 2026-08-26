@@ -2,6 +2,7 @@ const express = require("express");
 const connectDB = require("./config/db");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const compression = require("compression");
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 const path = require("path");
@@ -16,6 +17,7 @@ connectDB();
 
 // ✅ Middleware
 app.use(cors({ origin: true, credentials: true }));
+app.use(compression());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -72,11 +74,24 @@ app.post('/api/contact', async (req, res) => {
 
 // ✅ Serve frontend last (Vite uses 'dist'; CRA uses 'build')
 const frontendPath = path.join(__dirname, 'frontend', 'dist');
-app.use(express.static(frontendPath));
+app.use('/assets', express.static(path.join(frontendPath, 'assets'), {
+  maxAge: '1y',
+  immutable: true
+}));
+app.use(express.static(frontendPath, {
+  maxAge: '1d',
+  setHeaders: (res, filePath) => {
+    if (path.extname(filePath) === '.html') {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 // ✅ Frontend fallback (only for non-API routes)
 app.get(/^\/(?!api\/).*/, (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'));
+  res.sendFile(path.join(frontendPath, 'index.html'), {
+    headers: { 'Cache-Control': 'no-cache' }
+  });
 });
 
 // ✅ Start the server

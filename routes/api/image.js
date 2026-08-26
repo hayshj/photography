@@ -1,12 +1,38 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const sharp = require('sharp');
+const {
+  IMAGE_WIDTHS,
+  generateVariantBuffer,
+  getVariantPath
+} = require('../../services/imageProcessing');
 
 const router = express.Router();
 const galleriesDir = path.join(__dirname, '..', '..', 'galleries');
-const allowedWidths = new Set([320, 640, 900, 1400]);
+const allowedWidths = new Set(IMAGE_WIDTHS);
 const pendingTransforms = new Map();
+const transformQueue = [];
+let activeTransforms = 0;
+const MAX_TRANSFORMS = 4;
+
+function runNextTransform() {
+  if (activeTransforms >= MAX_TRANSFORMS || transformQueue.length === 0) return;
+  const { task, resolve, reject } = transformQueue.shift();
+  activeTransforms += 1;
+  task()
+    .then(resolve, reject)
+    .finally(() => {
+      activeTransforms -= 1;
+      runNextTransform();
+    });
+}
+
+function enqueueTransform(task) {
+  return new Promise((resolve, reject) => {
+    transformQueue.push({ task, resolve, reject });
+    runNextTransform();
+  });
+}
 
 function isSafeSegment(value) {
   return value &&
@@ -34,11 +60,7 @@ function findSource(galleryDir, filename, width) {
 
 async function createOptimizedImage(sourcePath, cachePath, width) {
   const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp.webp`;
-  const buffer = await sharp(sourcePath)
-    .rotate()
-    .resize({ width, withoutEnlargement: true })
-    .webp({ quality: width >= 1400 ? 72 : width >= 900 ? 76 : 72, effort: 4 })
-    .toBuffer();
+  const buffer = await generateVariantBuffer(sourcePath, width);
 
   try {
     await fs.promises.mkdir(path.dirname(cachePath), { recursive: true });
@@ -67,14 +89,15 @@ router.get('/:galleryId/:filename', async (req, res) => {
   const sourcePath = findSource(galleryDir, filename, width);
   if (!sourcePath) return res.status(404).json({ error: 'Image not found' });
 
-  const cacheFilename = `${filename}.webp`;
-  const cachePath = path.join(galleryDir, '.optimized', String(width), cacheFilename);
+  const cachePath = getVariantPath(galleryDir, filename, width);
 
   try {
     let optimizedBuffer = null;
     if (!fs.existsSync(cachePath)) {
       if (!pendingTransforms.has(cachePath)) {
-        const transform = createOptimizedImage(sourcePath, cachePath, width)
+        const transform = enqueueTransform(
+          () => createOptimizedImage(sourcePath, cachePath, width)
+        )
           .finally(() => pendingTransforms.delete(cachePath));
         pendingTransforms.set(cachePath, transform);
       }

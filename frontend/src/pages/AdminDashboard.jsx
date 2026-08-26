@@ -13,18 +13,22 @@ function AdminDashboard() {
   const [galleryToDelete, setGalleryToDelete] = useState(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchGalleries = async () => {
       try {
         const token = localStorage.getItem('adminToken');
         const response = await axios.get('/api/gallery', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal
         });
         setGalleries(response.data);
       } catch (err) {
+        if (axios.isCancel(err)) return;
         console.error('Failed to load galleries:', err);
       }
     };
     fetchGalleries();
+    return () => controller.abort();
   }, []);
 
   const handleLogout = () => {
@@ -83,14 +87,20 @@ function AdminDashboard() {
             key={gallery.galleryId}
             className="relative border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition rounded"
           >
-            <FadeInImage
-              src={gallery.coverImage ? optimizedImageUrl(gallery.coverImage, 640) : '/default-cover.jpg'}
-              srcSet={gallery.coverImage ? optimizedImageSrcSet(gallery.coverImage, [320, 640]) : undefined}
-              sizes="(max-width: 768px) calc(100vw - 3rem), 320px"
-              fallbackSrc={gallery.coverImage?.url}
-              alt={gallery.title}
-              className="w-full h-48 object-cover"
-            />
+            {gallery.coverImage ? (
+              <FadeInImage
+                src={optimizedImageUrl(gallery.coverImage, 640)}
+                srcSet={optimizedImageSrcSet(gallery.coverImage, [320, 640])}
+                sizes="(max-width: 768px) calc(100vw - 3rem), 320px"
+                fallbackSrc={gallery.coverImage.url}
+                alt={gallery.title}
+                className="w-full h-48 object-cover"
+              />
+            ) : (
+              <div className="w-full h-48 bg-gray-100 flex items-center justify-center text-gray-500">
+                No cover image
+              </div>
+            )}
             <div className="p-4">
               <div className="flex justify-between items-start">
                 <div>

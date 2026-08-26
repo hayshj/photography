@@ -1,6 +1,6 @@
 /**
- * One-time migration script: generates thumbnails for all existing gallery images
- * and updates MongoDB documents with thumbnailUrl.
+ * One-time migration script: generates thumbnails and responsive variants for
+ * existing galleries, then updates MongoDB with URLs and image dimensions.
  *
  * Usage:
  *   node generate-thumbnails.js          # generate disk thumbnails + update MongoDB
@@ -11,6 +11,10 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 require('dotenv').config();
+const {
+  generateResponsiveVariants,
+  readImageDimensions
+} = require('./services/imageProcessing');
 
 const galleriesDir = path.join(__dirname, 'galleries');
 const diskOnly = process.argv.includes('--disk');
@@ -20,10 +24,11 @@ async function generateThumbnail(srcPath, thumbDir, filename) {
   if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
   const thumbFilename = filename.replace(/\.[^.]+$/, '.webp');
   const thumbPath = path.join(thumbDir, thumbFilename);
-  if (fs.existsSync(thumbPath) && !force) return null; // already done
+  const legacyThumbPath = path.join(thumbDir, filename);
+  if ((fs.existsSync(thumbPath) || fs.existsSync(legacyThumbPath)) && !force) return null;
   await sharp(srcPath)
-    .resize(1000, null, { withoutEnlargement: true })
-    .webp({ quality: 100 })
+    .resize(900, null, { withoutEnlargement: true })
+    .webp({ quality: 76 })
     .toFile(thumbPath);
   return thumbFilename;
 }
@@ -46,8 +51,11 @@ async function generateDiskThumbnails() {
       const srcPath = path.join(galleryDir, filename);
       try {
         const thumbFilename = await generateThumbnail(srcPath, thumbDir, filename);
+        await generateResponsiveVariants(srcPath, galleryDir, filename, {
+          skipExisting: !force
+        });
         if (thumbFilename) console.log(`  Thumbnailed: ${filename} → ${thumbFilename}`);
-        else console.log(`  Skipped (exists): ${filename}`);
+        else console.log(`  Refreshed responsive variants: ${filename}`);
       } catch (err) {
         console.error(`  Error on ${filename}:`, err.message);
       }
@@ -71,18 +79,60 @@ async function updateMongoDB() {
 
     for (const img of gallery.images) {
       const webpFilename = img.filename.replace(/\.[^.]+$/, '.webp');
-      const expectedThumbUrl = `${galleryPath}/thumbnails/${webpFilename}`;
+      const webpThumbPath = path.join(
+        galleriesDir,
+        gallery.galleryId,
+        'thumbnails',
+        webpFilename
+      );
+      const expectedThumbUrl = fs.existsSync(webpThumbPath)
+        ? `${galleryPath}/thumbnails/${webpFilename}`
+        : `${galleryPath}/thumbnails/${img.filename}`;
       if (img.thumbnailUrl !== expectedThumbUrl) {
         img.thumbnailUrl = expectedThumbUrl;
         modified = true;
+      }
+
+      const sourcePath = path.join(galleriesDir, gallery.galleryId, img.filename);
+      if (fs.existsSync(sourcePath)) {
+        const dimensions = await readImageDimensions(sourcePath);
+        if (
+          img.width !== dimensions.width ||
+          img.height !== dimensions.height ||
+          img.aspectRatio !== dimensions.aspectRatio
+        ) {
+          Object.assign(img, dimensions);
+          modified = true;
+        }
       }
     }
 
     if (gallery.coverImage) {
       const webpFilename = gallery.coverImage.filename.replace(/\.[^.]+$/, '.webp');
-      const expectedThumbUrl = `${galleryPath}/thumbnails/${webpFilename}`;
+      const webpThumbPath = path.join(
+        galleriesDir,
+        gallery.galleryId,
+        'thumbnails',
+        webpFilename
+      );
+      const expectedThumbUrl = fs.existsSync(webpThumbPath)
+        ? `${galleryPath}/thumbnails/${webpFilename}`
+        : `${galleryPath}/thumbnails/${gallery.coverImage.filename}`;
       if (gallery.coverImage.thumbnailUrl !== expectedThumbUrl) {
         gallery.coverImage.thumbnailUrl = expectedThumbUrl;
+        modified = true;
+      }
+      const matchingImage = gallery.images.find(
+        img => img.filename === gallery.coverImage.filename
+      );
+      if (matchingImage && (
+        gallery.coverImage.width !== matchingImage.width ||
+        gallery.coverImage.height !== matchingImage.height ||
+        gallery.coverImage.aspectRatio !== matchingImage.aspectRatio
+      )) {
+        gallery.coverImage.width = matchingImage.width;
+        gallery.coverImage.height = matchingImage.height;
+        gallery.coverImage.aspectRatio = matchingImage.aspectRatio;
         modified = true;
       }
     }

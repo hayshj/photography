@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
 import Navbar from '../components/Navbar';
 import FadeInImage from '../components/FadeInImage';
 import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
@@ -22,12 +21,17 @@ function Galleries() {
   const [loading, setLoading] = useState(true); // Track loading state
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchGalleries = async () => {
       try {
-        const res = await axios.get('/api/gallery/exclude/portfolio'); // 👈 updated route
-        setGalleries(res.data);
+        const response = await fetch('/api/gallery/exclude/portfolio', {
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error('Failed to load galleries');
+        setGalleries(await response.json());
         setLoading(false); // Set loading to false once data is fetched
       } catch (err) {
+        if (err.name === 'AbortError') return;
         console.error('Failed to fetch galleries:', err);
         setError('Unable to load galleries. Please try again later.');
         setLoading(false); // Set loading to false even if there's an error
@@ -35,6 +39,7 @@ function Galleries() {
     };
 
     fetchGalleries();
+    return () => controller.abort();
   }, []);
 
   // Scroll to the top when navigating to the gallery page
@@ -65,14 +70,20 @@ function Galleries() {
             {galleries.map((gallery) => (
               <Link to={`/gallery/${gallery.galleryId}`} key={gallery.galleryId} onClick={scrollToTop}>
                 <div className="border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition">
-                  <FadeInImage
-                    src={gallery.coverImage ? optimizedImageUrl(gallery.coverImage, 640) : '/default-cover.jpg'}
-                    srcSet={gallery.coverImage ? optimizedImageSrcSet(gallery.coverImage, [320, 640]) : undefined}
-                    sizes="(max-width: 640px) calc(100vw - 3rem), (max-width: 768px) calc(50vw - 2.5rem), 352px"
-                    fallbackSrc={gallery.coverImage?.url}
-                    alt={gallery.title}
-                    className="w-full h-48 object-cover"
-                  />
+                  {gallery.coverImage ? (
+                    <FadeInImage
+                      src={optimizedImageUrl(gallery.coverImage, 640)}
+                      srcSet={optimizedImageSrcSet(gallery.coverImage, [320, 640])}
+                      sizes="(max-width: 640px) calc(100vw - 3rem), (max-width: 768px) calc(50vw - 2.5rem), 352px"
+                      fallbackSrc={gallery.coverImage.url}
+                      alt={gallery.title}
+                      className="w-full h-48 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center text-gray-500">
+                      No cover image
+                    </div>
+                  )}
                   <div className="p-4">
                     <h2 className="text-xl font-semibold">{gallery.title}</h2>
                     <p className="text-gray-600 text-sm">{gallery.date}</p>

@@ -6,20 +6,26 @@ import FadeInImage from './FadeInImage';
 import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
 
 function Gallery({ id, images, className = "", downloadable = true }) {
-  const [loading, setLoading] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (images && images.length >= 0) setLoading(false);
-
     const checkMobile = () => setIsMobile(window.innerWidth <= 850);
     checkMobile();
 
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, [images]);
+  }, []);
+
+  useEffect(() => {
+    if (!lightboxOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [lightboxOpen]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -35,7 +41,7 @@ function Gallery({ id, images, className = "", downloadable = true }) {
 
   // Keep forward lightbox navigation instant without downloading every original.
   useEffect(() => {
-    if (!lightboxOpen || images.length < 2) return;
+    if (!lightboxOpen || images.length < 2 || navigator.connection?.saveData) return;
     const nextIndex = (currentIndex + 1) % images.length;
     const preload = new Image();
     preload.src = optimizedImageUrl(images[nextIndex], 1400);
@@ -51,12 +57,7 @@ function Gallery({ id, images, className = "", downloadable = true }) {
   return (
     <section id={id} className={`pb-20 px-6 text-black min-h-screen ${className}`}>
       <div className="mx-auto">
-        {loading ? (
-          <div className="text-center pt-20">
-            <div className="w-12 h-12 mx-auto border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
-            <p className="mt-4 text-gray-600">Loading gallery...</p>
-          </div>
-        ) : images.length === 0 ? (
+        {images.length === 0 ? (
           <div className="text-center pt-20">
             <p className="text-gray-500">No images found in this gallery.</p>
           </div>
@@ -68,20 +69,28 @@ function Gallery({ id, images, className = "", downloadable = true }) {
               columnClassName="pl-4"
             >
               {images.map((img, index) => (
-                <div key={img.filename || img.url || index} className="mb-4 relative overflow-hidden">
-                  <FadeInImage
-                    src={optimizedImageUrl(img, 640)}
-                    srcSet={optimizedImageSrcSet(img, [320, 640])}
-                    sizes="(max-width: 700px) calc(100vw - 3rem), (max-width: 1100px) calc(50vw - 2.5rem), calc(33vw - 2rem)"
-                    fallbackSrc={img.url}
-                    alt={img.filename || `Gallery image ${index + 1}`}
-                    eager={index < 6}
+                <div key={img.filename || img.url || index} className="mb-4 relative overflow-hidden bg-gray-100">
+                  <button
+                    type="button"
                     onClick={() => {
                       setCurrentIndex(index);
                       setLightboxOpen(true);
                     }}
-                    className="w-full h-auto shadow-lg cursor-pointer"
-                  />
+                    className="block w-full"
+                    aria-label={`Open image ${index + 1} of ${images.length}`}
+                  >
+                    <FadeInImage
+                      src={optimizedImageUrl(img, 640)}
+                      srcSet={optimizedImageSrcSet(img, [320, 640])}
+                      sizes="(max-width: 700px) calc(100vw - 3rem), (max-width: 1100px) calc(50vw - 2.5rem), calc(33vw - 2rem)"
+                      fallbackSrc={img.url}
+                      width={img.width}
+                      height={img.height}
+                      alt={img.filename || `Gallery image ${index + 1}`}
+                      eager={index < 6}
+                      className="w-full h-auto shadow-lg cursor-pointer"
+                    />
+                  </button>
                   {downloadable && (
                     <>
                       <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
@@ -103,11 +112,17 @@ function Gallery({ id, images, className = "", downloadable = true }) {
       </div>
 
       {lightboxOpen && (
-        <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-white flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Image ${currentIndex + 1} of ${images.length}`}
+        >
           <button
             onClick={() => setLightboxOpen(false)}
             className="absolute top-4 right-4 text-black"
             aria-label="Close"
+            autoFocus
           >
             <X size={36} />
           </button>
@@ -121,6 +136,8 @@ function Gallery({ id, images, className = "", downloadable = true }) {
               srcSet={optimizedImageSrcSet(images[currentIndex], [640, 900, 1400])}
               sizes="(max-width: 700px) 300px, 90vw"
               fallbackSrc={images[currentIndex].url}
+              width={images[currentIndex].width}
+              height={images[currentIndex].height}
               alt={`Image ${currentIndex + 1}`}
               eager
               className="max-w-full max-h-[80vh] object-contain shadow-lg"

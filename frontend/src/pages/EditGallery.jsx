@@ -3,6 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import FadeInImage from '../components/FadeInImage';
+import LocalImagePreview from '../components/LocalImagePreview';
+import { optimizedImageUrl } from '../imageUrls';
+import { uploadImagesInBatches } from '../uploadImages';
 
 function EditGallery() {
   const { id } = useParams();
@@ -17,13 +21,16 @@ function EditGallery() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
     const fetchGallery = async () => {
       try {
         const token = localStorage.getItem('adminToken');
         const res = await axios.get(`/api/gallery/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal
         });
 
         const gallery = res.data;
@@ -34,6 +41,7 @@ function EditGallery() {
         setExistingImages(gallery.images || []);
         setLoading(false);
       } catch (err) {
+        if (axios.isCancel(err)) return;
         console.error(err);
         setError('Failed to load gallery.');
         setLoading(false);
@@ -41,6 +49,7 @@ function EditGallery() {
     };
 
     fetchGallery();
+    return () => controller.abort();
   }, [id]);
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -84,17 +93,12 @@ function EditGallery() {
       );
 
       if (newImages.length > 0) {
-        const formData = new FormData();
-        newImages.forEach((img) => formData.append('images', img));
-
-        const coverFile = newImages.find((img) => img.name === coverImage);
-        if (coverFile) formData.append('coverImage', coverFile);
-
-        await axios.post(`/api/gallery/${id}/upload`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${token}`,
-          },
+        await uploadImagesInBatches({
+          galleryId: id,
+          images: newImages,
+          coverImage,
+          token,
+          onProgress: setUploadProgress
         });
       }
 
@@ -180,8 +184,9 @@ function EditGallery() {
                     }`}
                     onClick={() => !submitting && handleCoverSelect(img.filename)}
                   >
-                    <img
-                      src={`${img.url}`}
+                    <FadeInImage
+                      src={optimizedImageUrl(img, 320)}
+                      fallbackSrc={img.thumbnailUrl || img.url}
                       alt={img.filename}
                       className="object-cover w-full h-32"
                     />
@@ -209,17 +214,17 @@ function EditGallery() {
                 ))}
 
                 {newImages.map((file, index) => {
-                  const preview = URL.createObjectURL(file);
+                  const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
                   return (
                     <div
-                      key={index}
+                      key={fileKey}
                       className={`relative border rounded overflow-hidden group ${
                         file.name === coverImage ? 'ring-4 ring-blue-500' : ''
                       }`}
                       onClick={() => !submitting && handleCoverSelect(file.name)}
                     >
-                      <img
-                        src={preview}
+                      <LocalImagePreview
+                        file={file}
                         alt={file.name}
                         className="object-cover w-full h-32"
                       />
@@ -266,7 +271,13 @@ function EditGallery() {
                 submitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              {submitting ? 'Saving...' : 'Save Changes'}
+              {submitting
+                ? uploadProgress > 0
+                  ? uploadProgress === 100
+                    ? 'Processing images...'
+                    : `Uploading ${uploadProgress}%`
+                  : 'Saving...'
+                : 'Save Changes'}
             </button>
           </div>
         </form>

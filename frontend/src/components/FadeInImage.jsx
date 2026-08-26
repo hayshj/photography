@@ -5,6 +5,8 @@ function FadeInImage({
   srcSet,
   sizes,
   fallbackSrc,
+  width,
+  height,
   alt,
   onClick,
   className = "",
@@ -23,6 +25,8 @@ function FadeInImage({
       src={usingFallback ? fallbackSrc : src}
       srcSet={usingFallback ? undefined : srcSet}
       sizes={usingFallback ? undefined : sizes}
+      width={width}
+      height={height}
       alt={alt}
       onClick={onClick}
       loading={eager ? 'eager' : 'lazy'}

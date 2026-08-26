@@ -20,13 +20,19 @@ const GallerySchema = new mongoose.Schema({
     {
       filename: String,
       url: String,
-      thumbnailUrl: String
+      thumbnailUrl: String,
+      width: Number,
+      height: Number,
+      aspectRatio: Number
     }
   ],
   coverImage: {
     filename: String,
     url: String,
-    thumbnailUrl: String
+    thumbnailUrl: String,
+    width: Number,
+    height: Number,
+    aspectRatio: Number
   }
 }, {
   timestamps: true
