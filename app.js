@@ -28,8 +28,10 @@ app.use('/galleries', express.static('galleries', {
 
 // ✅ API Routes
 const galleryRouter = require('./routes/api/gallery');
+const imageRouter = require('./routes/api/image');
 const adminRouter = require('./routes/api/admin');
 app.use('/api/gallery', galleryRouter);
+app.use('/api/image', imageRouter);
 app.use('/api/admin', adminRouter);
 
 // ✅ Contact Form Email Route

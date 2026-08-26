@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
 
 // Skeleton Loader Component
 const SkeletonLoader = () => (
@@ -64,11 +65,9 @@ function Galleries() {
               <Link to={`/gallery/${gallery.galleryId}`} key={gallery.galleryId} onClick={scrollToTop}>
                 <div className="border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition">
                   <img
-                    src={
-                      gallery.coverImage?.thumbnailUrl ||
-                      gallery.coverImage?.url ||
-                      '/default-cover.jpg'
-                    }
+                    src={gallery.coverImage ? optimizedImageUrl(gallery.coverImage, 640) : '/default-cover.jpg'}
+                    srcSet={gallery.coverImage ? optimizedImageSrcSet(gallery.coverImage, [320, 640]) : undefined}
+                    sizes="(max-width: 640px) calc(100vw - 3rem), (max-width: 768px) calc(50vw - 2.5rem), 352px"
                     alt={gallery.title}
                     loading="lazy"
                     decoding="async"

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Pencil, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -82,11 +83,9 @@ function AdminDashboard() {
             className="relative border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition rounded"
           >
             <img
-              src={
-                gallery.coverImage?.thumbnailUrl ||
-                gallery.coverImage?.url ||
-                '/default-cover.jpg'
-              }
+              src={gallery.coverImage ? optimizedImageUrl(gallery.coverImage, 640) : '/default-cover.jpg'}
+              srcSet={gallery.coverImage ? optimizedImageSrcSet(gallery.coverImage, [320, 640]) : undefined}
+              sizes="(max-width: 768px) calc(100vw - 3rem), 320px"
               alt={gallery.title}
               loading="lazy"
               decoding="async"

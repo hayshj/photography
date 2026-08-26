@@ -3,6 +3,7 @@ import { Download, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 import Masonry from 'react-masonry-css';
 import FadeInImage from './FadeInImage';
+import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
 
 function Gallery({ id, images, className = "", downloadable = true }) {
   const [loading, setLoading] = useState(true);
@@ -31,6 +32,14 @@ function Gallery({ id, images, className = "", downloadable = true }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [lightboxOpen, images.length]);
+
+  // Keep forward lightbox navigation instant without downloading every original.
+  useEffect(() => {
+    if (!lightboxOpen || images.length < 2) return;
+    const nextIndex = (currentIndex + 1) % images.length;
+    const preload = new Image();
+    preload.src = optimizedImageUrl(images[nextIndex], 1400);
+  }, [currentIndex, images, lightboxOpen]);
 
   const swipeHandlers = useSwipeable({
     onSwipedLeft: () => setCurrentIndex((prev) => (prev + 1) % images.length),
@@ -61,7 +70,9 @@ function Gallery({ id, images, className = "", downloadable = true }) {
               {images.map((img, index) => (
                 <div key={img.filename || img.url || index} className="mb-4 relative overflow-hidden">
                   <FadeInImage
-                    src={img.thumbnailUrl || img.url}
+                    src={optimizedImageUrl(img, 640)}
+                    srcSet={optimizedImageSrcSet(img, [320, 640])}
+                    sizes="(max-width: 700px) calc(100vw - 3rem), (max-width: 1100px) calc(50vw - 2.5rem), calc(33vw - 2rem)"
                     alt={img.filename || `Gallery image ${index + 1}`}
                     eager={index < 6}
                     onClick={() => {
@@ -105,8 +116,11 @@ function Gallery({ id, images, className = "", downloadable = true }) {
             className="relative max-w-full max-h-[90vh] flex items-center justify-center"
           >
             <img
-              src={images[currentIndex].url}
+              src={optimizedImageUrl(images[currentIndex], 900)}
+              srcSet={optimizedImageSrcSet(images[currentIndex], [640, 900, 1400])}
+              sizes="(max-width: 700px) 300px, 90vw"
               alt={`Image ${currentIndex + 1}`}
+              decoding="async"
               className="max-w-full max-h-[80vh] object-contain shadow-lg"
             />
             {downloadable && (
