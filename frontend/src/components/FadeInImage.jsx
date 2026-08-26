@@ -9,6 +9,7 @@ function FadeInImage({
   height,
   alt,
   onClick,
+  onSettled,
   className = "",
   eager = false
 }) {
@@ -30,11 +31,18 @@ function FadeInImage({
       alt={alt}
       onClick={onClick}
       loading={eager ? 'eager' : 'lazy'}
-      fetchPriority={eager ? 'high' : 'auto'}
+      fetchPriority={eager ? 'high' : 'low'}
       decoding="async"
-      onLoad={() => setLoaded(true)}
+      onLoad={() => {
+        setLoaded(true);
+        onSettled?.();
+      }}
       onError={() => {
-        if (!usingFallback && fallbackSrc) setUsingFallback(true);
+        if (!usingFallback && fallbackSrc && fallbackSrc !== src) {
+          setUsingFallback(true);
+          return;
+        }
+        onSettled?.();
       }}
       className={`${className} transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
     />

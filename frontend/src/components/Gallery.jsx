@@ -1,14 +1,63 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
-import Masonry from 'react-masonry-css';
 import FadeInImage from './FadeInImage';
 import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
+
+const PRIORITY_IMAGE_COUNT = 3;
+const DEFERRED_BATCH_SIZE = 9;
 
 function Gallery({ id, images, className = "", downloadable = true }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PRIORITY_IMAGE_COUNT);
+  const [settledImages, setSettledImages] = useState(() => new Set());
+  const loadMoreRef = useRef(null);
+  const previousImagesRef = useRef(images);
+
+  const visibleImages = useMemo(
+    () => images.slice(0, visibleCount),
+    [images, visibleCount]
+  );
+  const visibleBatchSettled = visibleImages.length > 0 &&
+    visibleImages.every((_, index) => settledImages.has(index));
+
+  const markImageSettled = useCallback((index) => {
+    setSettledImages(previous => {
+      if (previous.has(index)) return previous;
+      const next = new Set(previous);
+      next.add(index);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (previousImagesRef.current === images) return;
+    previousImagesRef.current = images;
+    setVisibleCount(PRIORITY_IMAGE_COUNT);
+    setSettledImages(new Set());
+  }, [images]);
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    if (!sentinel || !visibleBatchSettled || visibleCount >= images.length) return undefined;
+
+    if (!('IntersectionObserver' in window)) {
+      setVisibleCount(current => Math.min(current + DEFERRED_BATCH_SIZE, images.length));
+      return undefined;
+    }
+
+    let requestedNextBatch = false;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting || requestedNextBatch) return;
+      requestedNextBatch = true;
+      setVisibleCount(current => Math.min(current + DEFERRED_BATCH_SIZE, images.length));
+    }, { rootMargin: '800px 0px' });
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [images.length, visibleBatchSettled, visibleCount]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 850);
@@ -63,13 +112,9 @@ function Gallery({ id, images, className = "", downloadable = true }) {
           </div>
         ) : (
           <>
-            <Masonry
-              breakpointCols={{ default: 3, 1100: 2, 700: 1 }}
-              className="flex w-auto -ml-4"
-              columnClassName="pl-4"
-            >
-              {images.map((img, index) => (
-                <div key={img.filename || img.url || index} className="mb-4 relative overflow-hidden bg-gray-100">
+            <div className="grid grid-cols-1 min-[701px]:grid-cols-2 min-[1101px]:grid-cols-3 gap-4 items-start">
+              {visibleImages.map((img, index) => (
+                <div key={img.filename || img.url || index} className="relative overflow-hidden bg-gray-100 self-start">
                   <button
                     type="button"
                     onClick={() => {
@@ -87,7 +132,8 @@ function Gallery({ id, images, className = "", downloadable = true }) {
                       width={img.width}
                       height={img.height}
                       alt={img.filename || `Gallery image ${index + 1}`}
-                      eager={index < 6}
+                      eager={index < PRIORITY_IMAGE_COUNT}
+                      onSettled={() => markImageSettled(index)}
                       className="w-full h-auto shadow-lg cursor-pointer"
                     />
                   </button>
@@ -106,7 +152,10 @@ function Gallery({ id, images, className = "", downloadable = true }) {
                   )}
                 </div>
               ))}
-            </Masonry>
+            </div>
+            {visibleCount < images.length && (
+              <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
+            )}
           </>
         )}
       </div>
