@@ -2,10 +2,19 @@ const express = require("express");
 const connectDB = require("./config/db");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const compression = require("compression");
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
+const fs = require("fs");
 const path = require("path");
+
+// Compression improves transfer performance, but it should never keep the
+// application offline if a server restarts before dependencies are installed.
+let compression;
+try {
+  compression = require("compression");
+} catch (error) {
+  console.warn("Compression middleware is unavailable; run `npm ci` on the server.");
+}
 
 // Load env variables early
 dotenv.config();
@@ -17,7 +26,9 @@ connectDB();
 
 // ✅ Middleware
 app.use(cors({ origin: true, credentials: true }));
-app.use(compression());
+if (compression) {
+  app.use(compression());
+}
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -74,6 +85,12 @@ app.post('/api/contact', async (req, res) => {
 
 // ✅ Serve frontend last (Vite uses 'dist'; CRA uses 'build')
 const frontendPath = path.join(__dirname, 'frontend', 'dist');
+const frontendIndexPath = path.join(frontendPath, 'index.html');
+
+if (!fs.existsSync(frontendIndexPath)) {
+  console.error('Frontend build is missing. Run `npm run build` before starting the server.');
+}
+
 app.use('/assets', express.static(path.join(frontendPath, 'assets'), {
   maxAge: '1y',
   immutable: true
@@ -89,7 +106,11 @@ app.use(express.static(frontendPath, {
 
 // ✅ Frontend fallback (only for non-API routes)
 app.get(/^\/(?!api\/).*/, (req, res) => {
-  res.sendFile(path.join(frontendPath, 'index.html'), {
+  if (!fs.existsSync(frontendIndexPath)) {
+    return res.status(503).send('The site is being prepared. Please try again shortly.');
+  }
+
+  res.sendFile(frontendIndexPath, {
     headers: { 'Cache-Control': 'no-cache' }
   });
 });

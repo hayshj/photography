@@ -2,9 +2,15 @@
   "name": "photo_gallery",
   "version": "1.0.0",
   "main": "index.js",
+  "engines": {
+    "node": "22.x",
+    "npm": "10.x"
+  },
   "scripts": {
     "app": "nodemon app.js",
     "start": "node app.js",
+    "build": "npm ci --prefix frontend --include=dev && npm run build --prefix frontend",
+    "postinstall": "npm run build",
     "migrate:images": "node generate-thumbnails.js",
     "migrate:images:disk": "node generate-thumbnails.js --disk",
     "test": "echo \"Error: no test specified\" && exit 1"
