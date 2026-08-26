@@ -65,11 +65,13 @@ function Galleries() {
                 <div className="border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition">
                   <img
                     src={
-                      gallery.coverImage?.url
-                        ? `${gallery.coverImage.url}`
-                        : '/default-cover.jpg'
+                      gallery.coverImage?.thumbnailUrl ||
+                      gallery.coverImage?.url ||
+                      '/default-cover.jpg'
                     }
                     alt={gallery.title}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-48 object-cover"
                   />
                   <div className="p-4">

@@ -34,37 +34,10 @@ function Navbar() {
 
   const toggleMenu = () => setMenuOpen(prev => !prev);
 
-  const scrollAfterImagesLoad = (el) => {
+  const scrollToPortfolio = (el) => {
     const yOffset = -60;
-    const scrollToEl = () => {
-      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    };
-
-    const images = el.querySelectorAll('img');
-    const total = images.length;
-    let loaded = 0;
-
-    if (total === 0) {
-      setTimeout(scrollToEl, 250);
-      return;
-    }
-
-    const checkAndScroll = () => {
-      loaded++;
-      if (loaded === total) {
-        setTimeout(scrollToEl, 50);
-      }
-    };
-
-    images.forEach((img) => {
-      if (img.complete) {
-        checkAndScroll();
-      } else {
-        img.addEventListener('load', checkAndScroll);
-        img.addEventListener('error', checkAndScroll);
-      }
-    });
+    const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    window.scrollTo({ top: y, behavior: 'smooth' });
   };
 
   return (
@@ -79,7 +52,7 @@ function Navbar() {
           <Link to="/" onClick={() => window.scrollTo(0, 0)} className="hover:underline">
             Home
           </Link>
-          <HashLink to="/#portfolio" scroll={scrollAfterImagesLoad} className="hover:underline">
+          <HashLink to="/#portfolio" scroll={scrollToPortfolio} className="hover:underline">
             Portfolio
           </HashLink>
           <Link to="/gallery" onClick={() => window.scrollTo(0, 0)} className="hover:underline">
@@ -119,7 +92,7 @@ function Navbar() {
 
           <HashLink
             to="/#portfolio"
-            scroll={scrollAfterImagesLoad}
+            scroll={scrollToPortfolio}
             onClick={toggleMenu}
             className="hover:text-gray-700 capitalize"
           >

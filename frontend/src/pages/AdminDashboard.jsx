@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import { Pencil, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -84,11 +83,13 @@ function AdminDashboard() {
           >
             <img
               src={
-                gallery.coverImage?.url
-                  ? `${gallery.coverImage.url}`
-                  : '/default-cover.jpg'
+                gallery.coverImage?.thumbnailUrl ||
+                gallery.coverImage?.url ||
+                '/default-cover.jpg'
               }
               alt={gallery.title}
+              loading="lazy"
+              decoding="async"
               className="w-full h-48 object-cover"
             />
             <div className="p-4">

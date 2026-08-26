@@ -1,18 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Download, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 import Masonry from 'react-masonry-css';
 import FadeInImage from './FadeInImage';
-
-const PAGE_SIZE = 24;
 
 function Gallery({ id, images, className = "", downloadable = true }) {
   const [loading, setLoading] = useState(true);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const sentinelRef = useRef(null);
 
   useEffect(() => {
     if (images && images.length >= 0) setLoading(false);
@@ -23,26 +19,6 @@ function Gallery({ id, images, className = "", downloadable = true }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, [images]);
-
-  // Reset visible count when images change (e.g. navigating between galleries)
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [images]);
-
-  // Infinite scroll: load more when sentinel enters viewport
-  useEffect(() => {
-    if (!sentinelRef.current || visibleCount >= images.length) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + PAGE_SIZE, images.length));
-        }
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [visibleCount, images.length]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -63,8 +39,6 @@ function Gallery({ id, images, className = "", downloadable = true }) {
     trackMouse: false
   });
 
-  const visibleImages = images.slice(0, visibleCount);
-
   return (
     <section id={id} className={`pb-20 px-6 text-black min-h-screen ${className}`}>
       <div className="mx-auto">
@@ -84,11 +58,12 @@ function Gallery({ id, images, className = "", downloadable = true }) {
               className="flex w-auto -ml-4"
               columnClassName="pl-4"
             >
-              {visibleImages.map((img, index) => (
-                <div key={index} className="mb-4 relative overflow-hidden">
+              {images.map((img, index) => (
+                <div key={img.filename || img.url || index} className="mb-4 relative overflow-hidden">
                   <FadeInImage
                     src={img.thumbnailUrl || img.url}
                     alt={img.filename || `Gallery image ${index + 1}`}
+                    eager={index < 6}
                     onClick={() => {
                       setCurrentIndex(index);
                       setLightboxOpen(true);
@@ -111,9 +86,6 @@ function Gallery({ id, images, className = "", downloadable = true }) {
                 </div>
               ))}
             </Masonry>
-            {visibleCount < images.length && (
-              <div ref={sentinelRef} className="h-10" />
-            )}
           </>
         )}
       </div>

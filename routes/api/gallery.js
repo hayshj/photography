@@ -28,7 +28,13 @@ const upload = multer({ storage });
 // ✅ GET all galleries
 router.get('/', async (req, res) => {
   try {
-    const galleries = await Gallery.find().sort({ date: -1 });
+    // Gallery cards only need metadata and the cover. Returning every image in
+    // every gallery made this small page download the entire photo catalogue.
+    const galleries = await Gallery.find()
+      .select('galleryId title date coverImage')
+      .sort({ date: -1 })
+      .lean();
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json(galleries);
   } catch (err) {
     console.error(err);
@@ -146,8 +152,9 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
 // ✅ GET gallery by ID
 router.get('/:id', async (req, res) => {
   try {
-    const gallery = await Gallery.findOne({ galleryId: req.params.id });
+    const gallery = await Gallery.findOne({ galleryId: req.params.id }).lean();
     if (!gallery) return res.status(404).json({ error: 'Gallery not found' });
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json(gallery);
   } catch (err) {
     console.error(err);
@@ -201,7 +208,11 @@ router.put('/:id', verifyAdmin, async (req, res) => {
 // ✅ GET all galleries except 'portfolio'
 router.get('/exclude/portfolio', async (req, res) => {
   try {
-    const galleries = await Gallery.find({ galleryId: { $ne: 'portfolio' } }).sort({ date: -1 });
+    const galleries = await Gallery.find({ galleryId: { $ne: 'portfolio' } })
+      .select('galleryId title date coverImage')
+      .sort({ date: -1 })
+      .lean();
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
     res.json(galleries);
   } catch (err) {
     console.error(err);
