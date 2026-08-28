@@ -4,15 +4,25 @@ import { useSwipeable } from 'react-swipeable';
 import FadeInImage from './FadeInImage';
 import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
 
-const PRIORITY_IMAGE_COUNT = 3;
 const DEFERRED_BATCH_SIZE = 9;
+
+function getViewportColumnCount() {
+  if (typeof window === 'undefined') return 1;
+  if (window.innerWidth <= 700) return 1;
+  if (window.innerWidth <= 1100) return 2;
+  return 3;
+}
+
+function getIsMobileViewport() {
+  return typeof window !== 'undefined' && window.innerWidth <= 850;
+}
 
 function Gallery({ id, images, className = "", downloadable = true }) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
-  const [columnCount, setColumnCount] = useState(3);
-  const [visibleCount, setVisibleCount] = useState(PRIORITY_IMAGE_COUNT);
+  const [isMobile, setIsMobile] = useState(getIsMobileViewport);
+  const [columnCount, setColumnCount] = useState(getViewportColumnCount);
+  const [visibleCount, setVisibleCount] = useState(getViewportColumnCount);
   const [settledImages, setSettledImages] = useState(() => new Set());
   const [measuredAspectRatios, setMeasuredAspectRatios] = useState(() => new Map());
   const loadMoreRef = useRef(null);
@@ -32,7 +42,8 @@ function Gallery({ id, images, className = "", downloadable = true }) {
     visibleImages.forEach((img, index) => {
       const storedRatio = Number(img.aspectRatio) ||
         (img.width && img.height ? img.width / img.height : 0);
-      const aspectRatio = measuredAspectRatios.get(index) || storedRatio || 1;
+      const measuredRatio = columnCount > 1 ? measuredAspectRatios.get(index) : 0;
+      const aspectRatio = measuredRatio || storedRatio || 1;
       const shortestColumn = columnHeights.indexOf(Math.min(...columnHeights));
       const targetColumn = index < effectiveColumnCount ? index : shortestColumn;
 
@@ -68,7 +79,7 @@ function Gallery({ id, images, className = "", downloadable = true }) {
   useEffect(() => {
     if (previousImagesRef.current === images) return;
     previousImagesRef.current = images;
-    setVisibleCount(PRIORITY_IMAGE_COUNT);
+    setVisibleCount(getViewportColumnCount());
     setSettledImages(new Set());
     setMeasuredAspectRatios(new Map());
   }, [images]);
@@ -95,9 +106,8 @@ function Gallery({ id, images, className = "", downloadable = true }) {
 
   useEffect(() => {
     const checkViewport = () => {
-      const viewportWidth = window.innerWidth;
-      setIsMobile(viewportWidth <= 850);
-      setColumnCount(viewportWidth <= 700 ? 1 : viewportWidth <= 1100 ? 2 : 3);
+      setIsMobile(getIsMobileViewport());
+      setColumnCount(getViewportColumnCount());
     };
     checkViewport();
 
@@ -176,8 +186,10 @@ function Gallery({ id, images, className = "", downloadable = true }) {
                           width={img.width}
                           height={img.height}
                           alt={img.filename || `Gallery image ${index + 1}`}
-                          eager={index < PRIORITY_IMAGE_COUNT}
-                          onLoad={(event) => recordAspectRatio(index, event.currentTarget)}
+                          eager={index < columnCount}
+                          onLoad={columnCount > 1
+                            ? (event) => recordAspectRatio(index, event.currentTarget)
+                            : undefined}
                           onSettled={() => markImageSettled(index)}
                           className="w-full h-auto shadow-lg cursor-pointer"
                         />
