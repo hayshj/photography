@@ -4,8 +4,11 @@ import heroFallback from '../assets/hero.jpg';
 import hero768 from '../assets/hero-768.webp';
 import hero1280 from '../assets/hero-1280.webp';
 import hero1920 from '../assets/hero-1920.webp';
+import hero2560 from '../assets/hero-2560.webp';
+import hero3599 from '../assets/hero-3599.webp';
 import HomeNavbar from '../components/HomeNavbar';
 import Gallery from '../components/Gallery';
+import { GalleryGridSkeleton } from '../components/LoadingStates';
 
 function Home() {
   const [gallery, setGallery] = useState(null);
@@ -26,10 +29,10 @@ function Home() {
         setError('Gallery not found.');
       }
     };
-  
+
     fetchGallery();
     return () => controller.abort();
-  }, []);  
+  }, []);
 
   return (
     <>
@@ -40,7 +43,7 @@ function Home() {
         <picture className="absolute inset-0" aria-hidden="true">
           <source
             type="image/webp"
-            srcSet={`${hero768} 768w, ${hero1280} 1280w, ${hero1920} 1920w`}
+            srcSet={`${hero768} 768w, ${hero1280} 1280w, ${hero1920} 1920w, ${hero2560} 2560w, ${hero3599} 3599w`}
             sizes="100vw"
           />
           <img
@@ -69,15 +72,14 @@ function Home() {
       </div>
 
       {/* Gallery Section */}
-      <section className="bg-white text-black">
-        <div className="text-center py-8">
-        {error ? (
-          <p className="text-red-600 text-lg">{error}</p>
-        ) : !gallery ? (
-          <p className="text-gray-500 text-lg">Loading gallery...</p>
-        ) : null}
-        </div>
-        {gallery && <Gallery id="portfolio" images={gallery.images} downloadable={false}/>}
+      <section className="bg-white text-black pt-16" aria-busy={!gallery && !error}>
+        {error && (
+          <div className="text-center pb-8">
+            <p className="text-red-600 text-lg">{error}</p>
+          </div>
+        )}
+        {!gallery && !error && <GalleryGridSkeleton />}
+        {gallery && <Gallery id="portfolio" images={gallery.images} downloadable={false} />}
       </section>
     </>
   );

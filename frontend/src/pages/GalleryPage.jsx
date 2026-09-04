@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Gallery from '../components/Gallery';
 import { ArrowLeft } from 'lucide-react';
+import { GalleryGridSkeleton } from '../components/LoadingStates';
 
 function GalleryPage() {
   const { id } = useParams();
@@ -48,12 +49,13 @@ function GalleryPage() {
           <p className="text-red-600 text-lg text-center w-full">{error}</p>
         ) : (
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-center px-10 w-full">
-            {gallery?.title}
+            {gallery?.title || <span className="loading-shimmer block h-10 w-64 max-w-full mx-auto bg-gray-100 rounded" />}
           </h1>
         )}
       </div>
 
 
+        {!gallery && !error && <GalleryGridSkeleton />}
         {gallery && <Gallery id="gallery" images={gallery.images || []} />}
       </section>
     </>

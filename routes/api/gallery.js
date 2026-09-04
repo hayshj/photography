@@ -12,8 +12,17 @@ const {
   getVariantPath,
   readImageDimensions
 } = require('../../services/imageProcessing');
+const { uploadGalleryImageAssets } = require('../../services/minioStorage');
 
 const router = express.Router();
+const PUBLIC_CACHE_CONTROL = 'public, max-age=60, stale-while-revalidate=300';
+
+function setPublicCacheHeaders(res) {
+  res.set({
+    'Cache-Control': PUBLIC_CACHE_CONTROL,
+    'Cloudflare-CDN-Cache-Control': PUBLIC_CACHE_CONTROL
+  });
+}
 const uploadDir = path.join(__dirname, '..', '..', 'galleries');
 
 // Ensure the upload directory exists
@@ -61,7 +70,7 @@ router.get('/', async (req, res) => {
       .select('galleryId title date coverImage')
       .sort({ date: -1 })
       .lean();
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    setPublicCacheHeaders(res);
     res.json(galleries);
   } catch (err) {
     console.error(err);
@@ -108,6 +117,7 @@ async function processUploadedImage(file, galleryDir, thumbDir, galleryPath) {
   const dimensions = await readImageDimensions(file.path);
   const thumbFilename = await generateThumbnail(file.path, thumbDir, file.filename);
   await generateResponsiveVariants(file.path, galleryDir, file.filename);
+  await uploadGalleryImageAssets(path.basename(galleryDir), galleryDir, file.filename);
 
   return {
     originalName: file.originalname,
@@ -207,7 +217,7 @@ router.get('/:id', async (req, res) => {
   try {
     const gallery = await Gallery.findOne({ galleryId: req.params.id }).lean();
     if (!gallery) return res.status(404).json({ error: 'Gallery not found' });
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    setPublicCacheHeaders(res);
     res.json(gallery);
   } catch (err) {
     console.error(err);
@@ -273,7 +283,7 @@ router.get('/exclude/portfolio', async (req, res) => {
       .select('galleryId title date coverImage')
       .sort({ date: -1 })
       .lean();
-    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=300');
+    setPublicCacheHeaders(res);
     res.json(galleries);
   } catch (err) {
     console.error(err);

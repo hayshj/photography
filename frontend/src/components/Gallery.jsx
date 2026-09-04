@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Download, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { useSwipeable } from 'react-swipeable';
 import FadeInImage from './FadeInImage';
-import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
+import { optimizedImageSrcSet, optimizedImageUrl, originalImageUrl } from '../imageUrls';
 
 const DEFERRED_BATCH_SIZE = 9;
 
@@ -151,6 +151,10 @@ function Gallery({ id, images, className = "", downloadable = true }) {
     trackMouse: false
   });
 
+  const currentImage = images[currentIndex];
+  const lightboxAspectRatio = Number(currentImage?.aspectRatio) ||
+    (currentImage?.width && currentImage?.height ? currentImage.width / currentImage.height : 1);
+
   return (
     <section id={id} className={`pb-20 px-6 text-black min-h-screen ${className}`}>
       <div className="mx-auto">
@@ -179,10 +183,10 @@ function Gallery({ id, images, className = "", downloadable = true }) {
                         aria-label={`Open image ${index + 1} of ${images.length}`}
                       >
                         <FadeInImage
-                          src={optimizedImageUrl(img, 640)}
-                          srcSet={optimizedImageSrcSet(img, [320, 640])}
+                          src={optimizedImageUrl(img, 900)}
+                          srcSet={optimizedImageSrcSet(img, [640, 900, 1400])}
                           sizes="(max-width: 700px) calc(100vw - 3rem), (max-width: 1100px) calc(50vw - 2.5rem), calc(33vw - 2rem)"
-                          fallbackSrc={img.url}
+                          fallbackSrc={originalImageUrl(img)}
                           width={img.width}
                           height={img.height}
                           alt={img.filename || `Gallery image ${index + 1}`}
@@ -198,7 +202,7 @@ function Gallery({ id, images, className = "", downloadable = true }) {
                         <>
                           <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                           <a
-                            href={img.url}
+                            href={originalImageUrl(img)}
                             download={img.filename || `image-${index + 1}`}
                             className="absolute bottom-2 right-2 text-white text-xl rounded-full p-2 opacity-90 hover:opacity-100 transition"
                             title="Download Image"
@@ -213,7 +217,15 @@ function Gallery({ id, images, className = "", downloadable = true }) {
               ))}
             </div>
             {visibleCount < images.length && (
-              <div ref={loadMoreRef} className="h-px" aria-hidden="true" />
+              <div
+                ref={loadMoreRef}
+                className="flex items-center justify-center py-10"
+                role="status"
+                aria-live="polite"
+              >
+                <div className="h-9 w-9 rounded-full border-2 border-gray-200 border-t-black animate-spin" aria-hidden="true" />
+                <span className="sr-only">Loading more photographs</span>
+              </div>
             )}
           </>
         )}
@@ -237,24 +249,28 @@ function Gallery({ id, images, className = "", downloadable = true }) {
 
           <div
             {...swipeHandlers}
-            className="relative max-w-full max-h-[90vh] flex items-center justify-center"
+            className="relative flex items-center justify-center"
+            style={{
+              width: `min(90vw, ${80 * lightboxAspectRatio}vh)`,
+              aspectRatio: lightboxAspectRatio
+            }}
           >
             <FadeInImage
-              src={optimizedImageUrl(images[currentIndex], 900)}
+              src={optimizedImageUrl(images[currentIndex], 1400)}
               srcSet={optimizedImageSrcSet(images[currentIndex], [640, 900, 1400])}
               sizes="(max-width: 700px) 300px, 90vw"
-              fallbackSrc={images[currentIndex].url}
+              fallbackSrc={originalImageUrl(images[currentIndex])}
               width={images[currentIndex].width}
               height={images[currentIndex].height}
               alt={`Image ${currentIndex + 1}`}
               eager
-              className="max-w-full max-h-[80vh] object-contain shadow-lg"
+              className="w-full h-full object-contain shadow-lg"
             />
             {downloadable && (
               <>
                 <div className="absolute bottom-0 left-0 w-full h-18 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
                 <a
-                  href={images[currentIndex].url}
+                  href={originalImageUrl(images[currentIndex])}
                   download={images[currentIndex].filename || `image-${currentIndex + 1}`}
                   className="absolute bottom-2 right-2 text-white text-xl rounded-full p-2 opacity-90 hover:opacity-100 transition"
                   title="Download Image"

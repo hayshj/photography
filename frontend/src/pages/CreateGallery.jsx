@@ -77,7 +77,13 @@ function CreateGallery() {
       navigate('/admin');
     } catch (err) {
       console.error('Error creating gallery:', err);
-      if (err.response?.status === 409) {
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        localStorage.removeItem('adminToken');
+        navigate('/admin/login', {
+          replace: true,
+          state: { message: 'Your admin session expired. Please log in again, then create the gallery.' }
+        });
+      } else if (err.response?.status === 409) {
         setError('A gallery with this ID already exists.');
       } else {
         setError('There was a problem creating the gallery. Please try again.');

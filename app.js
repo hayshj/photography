@@ -32,19 +32,10 @@ if (compression) {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// ✅ Static image folder
-app.use('/galleries', express.static('galleries', {
-  setHeaders: (res) => {
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-  }
-}));
-
 // ✅ API Routes
 const galleryRouter = require('./routes/api/gallery');
-const imageRouter = require('./routes/api/image');
 const adminRouter = require('./routes/api/admin');
 app.use('/api/gallery', galleryRouter);
-app.use('/api/image', imageRouter);
 app.use('/api/admin', adminRouter);
 
 // ✅ Contact Form Email Route

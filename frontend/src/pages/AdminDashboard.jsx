@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Pencil, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import FadeInImage from '../components/FadeInImage';
-import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
+import { optimizedImageSrcSet, optimizedImageUrl, originalImageUrl } from '../imageUrls';
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -89,10 +89,10 @@ function AdminDashboard() {
           >
             {gallery.coverImage ? (
               <FadeInImage
-                src={optimizedImageUrl(gallery.coverImage, 640)}
-                srcSet={optimizedImageSrcSet(gallery.coverImage, [320, 640])}
+                src={optimizedImageUrl(gallery.coverImage, 900)}
+                srcSet={optimizedImageSrcSet(gallery.coverImage, [640, 900])}
                 sizes="(max-width: 768px) calc(100vw - 3rem), 320px"
-                fallbackSrc={gallery.coverImage.url}
+                fallbackSrc={originalImageUrl(gallery.coverImage)}
                 alt={gallery.title}
                 className="w-full h-48 object-cover"
               />

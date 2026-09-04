@@ -3,12 +3,12 @@ const path = require('path');
 const sharp = require('sharp');
 
 const IMAGE_WIDTHS = [320, 640, 900, 1400];
-const PREGENERATED_WIDTHS = [320, 640];
+const PREGENERATED_WIDTHS = IMAGE_WIDTHS;
 
 function qualityForWidth(width) {
-  if (width >= 1400) return 72;
-  if (width >= 900) return 76;
-  return 72;
+  if (width >= 1400) return 86;
+  if (width >= 900) return 86;
+  return 84;
 }
 
 function getVariantPath(galleryDir, filename, width) {

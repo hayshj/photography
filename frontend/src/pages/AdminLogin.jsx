@@ -1,12 +1,13 @@
 // src/pages/AdminLogin.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function AdminLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const location = useLocation();
+  const [error, setError] = useState(location.state?.message || '');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {

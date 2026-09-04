@@ -5,8 +5,9 @@ import axios from 'axios';
 import Navbar from '../components/Navbar';
 import FadeInImage from '../components/FadeInImage';
 import LocalImagePreview from '../components/LocalImagePreview';
-import { optimizedImageUrl } from '../imageUrls';
+import { optimizedImageUrl, originalImageUrl } from '../imageUrls';
 import { uploadImagesInBatches } from '../uploadImages';
+import { FormLoadingState } from '../components/LoadingStates';
 
 function EditGallery() {
   const { id } = useParams();
@@ -123,7 +124,7 @@ function EditGallery() {
     navigate('/admin');
   };
 
-  if (loading) return <p className="p-8">Loading...</p>;
+  if (loading) return <><Navbar /><FormLoadingState /></>;
 
   return (
     <div className="min-h-screen p-8">
@@ -186,7 +187,7 @@ function EditGallery() {
                   >
                     <FadeInImage
                       src={optimizedImageUrl(img, 320)}
-                      fallbackSrc={img.thumbnailUrl || img.url}
+                      fallbackSrc={originalImageUrl(img)}
                       alt={img.filename}
                       className="object-cover w-full h-32"
                     />

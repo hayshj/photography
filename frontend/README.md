@@ -1,12 +1,23 @@
-# React + Vite
+# Photography frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## MinIO image origin
 
-Currently, two official plugins are available:
+The frontend converts image object keys to public MinIO URLs through
+`src/imageUrls.js`. Set `MINIO_PUBLIC_BASE_URL` before the frontend build. This
+is the only MinIO setting embedded in browser code; credentials and private S3
+API settings remain server-only.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Copy existing image assets into the configured bucket with these object keys:
 
-## Expanding the ESLint configuration
+- `galleries/<galleryId>/<filename>`
+- `galleries/<galleryId>/thumbnails/<filename>`
+- `galleries/<galleryId>/.optimized/<width>/<filename>.webp`
+- `site/hero.jpg`
+- `site/hero-768.webp`
+- `site/hero-1280.webp`
+- `site/hero-1920.webp`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Before copying, run `npm run migrate:images:disk` once so every responsive width
+(320, 640, 900, and 1400) exists. The public origin must allow anonymous reads.
+Include the bucket path in `MINIO_PUBLIC_BASE_URL` if the public hostname does
+not map directly to the bucket.

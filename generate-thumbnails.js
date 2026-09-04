@@ -19,6 +19,8 @@ const {
 const galleriesDir = path.join(__dirname, 'galleries');
 const diskOnly = process.argv.includes('--disk');
 const force = process.argv.includes('--force');
+const variantsOnly = process.argv.includes('--variants-only');
+const highResOnly = process.argv.includes('--high-res-only');
 
 async function generateThumbnail(srcPath, thumbDir, filename) {
   if (!fs.existsSync(thumbDir)) fs.mkdirSync(thumbDir, { recursive: true });
@@ -50,9 +52,12 @@ async function generateDiskThumbnails() {
     for (const filename of files) {
       const srcPath = path.join(galleryDir, filename);
       try {
-        const thumbFilename = await generateThumbnail(srcPath, thumbDir, filename);
+        const thumbFilename = variantsOnly
+          ? null
+          : await generateThumbnail(srcPath, thumbDir, filename);
         await generateResponsiveVariants(srcPath, galleryDir, filename, {
-          skipExisting: !force
+          skipExisting: !force,
+          widths: highResOnly ? [900, 1400] : undefined
         });
         if (thumbFilename) console.log(`  Thumbnailed: ${filename} → ${thumbFilename}`);
         else console.log(`  Refreshed responsive variants: ${filename}`);

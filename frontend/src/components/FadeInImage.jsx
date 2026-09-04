@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 function FadeInImage({
   src,
@@ -14,13 +14,12 @@ function FadeInImage({
   className = "",
   eager = false
 }) {
-  const [loaded, setLoaded] = useState(false);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [loadedSrc, setLoadedSrc] = useState('');
+  const [fallbackForSrc, setFallbackForSrc] = useState('');
+  const [failedSrc, setFailedSrc] = useState('');
 
-  useEffect(() => {
-    setLoaded(false);
-    setUsingFallback(false);
-  }, [src]);
+  const usingFallback = fallbackForSrc === src;
+  const settled = loadedSrc === src || failedSrc === src;
 
   return (
     <img
@@ -34,19 +33,21 @@ function FadeInImage({
       loading={eager ? 'eager' : 'lazy'}
       fetchPriority={eager ? 'high' : 'low'}
       decoding="async"
+      aria-busy={!settled}
       onLoad={(event) => {
-        setLoaded(true);
+        setLoadedSrc(src);
         onLoad?.(event);
         onSettled?.();
       }}
       onError={() => {
         if (!usingFallback && fallbackSrc && fallbackSrc !== src) {
-          setUsingFallback(true);
+          setFallbackForSrc(src);
           return;
         }
+        setFailedSrc(src);
         onSettled?.();
       }}
-      className={`${className} transition-opacity duration-200 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      className={`${className} transition-opacity duration-300 ${settled ? 'opacity-100' : 'opacity-60 bg-gray-100 animate-pulse'}`}
     />
   );
 }

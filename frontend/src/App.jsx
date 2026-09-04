@@ -1,9 +1,10 @@
 import { lazy, Suspense } from 'react';
+import Home from './pages/Home';
 import { Routes, Route } from 'react-router-dom';
 import Footer from './components/Footer';
+import { PageLoadingState } from './components/LoadingStates';
 import './App.css';
 
-const Home = lazy(() => import('./pages/Home'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Galleries = lazy(() => import('./pages/Galleries'));
 const GalleryPage = lazy(() => import('./pages/GalleryPage'));
@@ -14,17 +15,11 @@ const EditGallery = lazy(() => import('./pages/EditGallery'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const RequireAdmin = lazy(() => import('./components/RequireAdmin'));
 
-const PageLoader = () => (
-  <div className="min-h-screen flex items-center justify-center bg-white text-gray-600">
-    <span className="sr-only">Loading page</span>
-    <div className="w-10 h-10 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
-  </div>
-);
 
 function App() {
   return (
     <>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<PageLoadingState />}>
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Home />} />

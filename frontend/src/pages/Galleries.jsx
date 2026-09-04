@@ -2,18 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import FadeInImage from '../components/FadeInImage';
-import { optimizedImageSrcSet, optimizedImageUrl } from '../imageUrls';
+import { optimizedImageSrcSet, optimizedImageUrl, originalImageUrl } from '../imageUrls';
+import { GalleryCardsSkeleton } from '../components/LoadingStates';
+function formatGalleryDate(date) {
+  const match = String(date || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[2]}-${match[3]}-${match[1]}` : date;
+}
 
-// Skeleton Loader Component
-const SkeletonLoader = () => (
-  <div className="w-full h-64 bg-gray-300 animate-pulse">
-    <div className="w-full h-48 bg-gray-400"></div>
-    <div className="p-4">
-      <div className="w-3/4 h-6 bg-gray-400 mb-2"></div>
-      <div className="w-1/2 h-4 bg-gray-400"></div>
-    </div>
-  </div>
-);
 
 function Galleries() {
   const [galleries, setGalleries] = useState([]);
@@ -54,15 +49,7 @@ function Galleries() {
         <h1 className="text-3xl font-bold mb-8 text-center">Galleries</h1>
 
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Show Skeleton loaders while galleries are loading */}
-            <SkeletonLoader />
-            <SkeletonLoader />
-            <SkeletonLoader />
-            <SkeletonLoader />
-            <SkeletonLoader />
-            <SkeletonLoader />
-          </div>
+          <GalleryCardsSkeleton />
         ) : error ? (
           <p className="text-center text-red-600 mb-6">{error}</p> // Show error if there's an issue fetching data
         ) : (
@@ -72,10 +59,10 @@ function Galleries() {
                 <div className="border border-gray-300 overflow-hidden shadow-md hover:shadow-lg transition">
                   {gallery.coverImage ? (
                     <FadeInImage
-                      src={optimizedImageUrl(gallery.coverImage, 640)}
-                      srcSet={optimizedImageSrcSet(gallery.coverImage, [320, 640])}
+                      src={optimizedImageUrl(gallery.coverImage, 900)}
+                      srcSet={optimizedImageSrcSet(gallery.coverImage, [640, 900])}
                       sizes="(max-width: 640px) calc(100vw - 3rem), (max-width: 768px) calc(50vw - 2.5rem), 352px"
-                      fallbackSrc={gallery.coverImage.url}
+                      fallbackSrc={originalImageUrl(gallery.coverImage)}
                       alt={gallery.title}
                       className="w-full h-48 object-cover"
                     />
@@ -86,7 +73,7 @@ function Galleries() {
                   )}
                   <div className="p-4">
                     <h2 className="text-xl font-semibold">{gallery.title}</h2>
-                    <p className="text-gray-600 text-sm">{gallery.date}</p>
+                    <p className="text-gray-600 text-sm">{formatGalleryDate(gallery.date)}</p>
                   </div>
                 </div>
               </Link>
